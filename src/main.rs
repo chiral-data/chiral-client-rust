@@ -47,13 +47,7 @@ pub async fn add_user(client: &mut ChiralClient<Channel>,user_id: i32,username: 
 }
 
 
-async fn call_endpoint(
-    client: &mut ChiralClient<Channel>,
-    end_point: &str,
-    payload: serde_json::Value,
-    email: &str,
-    token_auth: &str,
-) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+async fn call_endpoint(client: &mut ChiralClient<Channel>,end_point: &str,payload: serde_json::Value,email: &str,token_auth: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let content = serde_json::to_string(&serde_json::json!({ end_point: payload }))?;
 
     let mut request = Request::new(RequestUserCommunicate {
