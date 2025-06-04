@@ -130,7 +130,7 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
 }
 
 pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, offset: u32, count_per_page: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
-    println!("hello");
+    let end_point = "GetJobs";
     let serialized = format!(
         "{{\"{}\": [{}, {}]}}",
         end_point, offset, count_per_page
@@ -233,6 +233,277 @@ pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, t
     Err("Unexpected empty response from server".into())
 }
 
+pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "ListOfProjectFiles";
+    let serialized = format!(
+    "{{\"{}\": \"{}\"}}",
+    end_point, project_name
+    );
+
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
+pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "ListOfExampleProjects";
+    let serialized = format!(
+        "{{\"{}\": null}}",
+        end_point
+    );
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
+pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "ImportExampleProject";
+    let serialized = format!(
+    "{{\"{}\": \"{}\"}}",
+    end_point, project_name
+    );
+
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
+pub async fn get_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str, file_name: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
+    let end_point = "GetProjectFile";
+    let serialized = format!(
+        "{{\"{}\": [\"{}\", \"{}\"]}}",
+        end_point, project_name, file_name
+    );
+
+
+    let req_msg = RequestUserCommunicate {
+        serialized_request: serialized.clone(),
+    };
+
+    println!("Sending payload: {}", serialized); 
+
+    let mut request = Request::new(req_msg);
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    println!("Reply JSON: {}", response.serialized_reply);
+
+
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+
+}
+
+pub async fn submit_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, command_string: &str, project_name: &str, input_files: &[&str], output_files: &[&str]) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let end_point = "SubmitJob";
+
+    let input_files_json = serde_json::to_string(&input_files)?;
+    let output_files_json = serde_json::to_string(&output_files)?;
+
+    let serialized = format!(
+        "{{\"{}\": [\"{}\", \"{}\", {}, {}]}}",
+        end_point, command_string, project_name, input_files_json, output_files_json
+    );
+
+    let req_msg = RequestUserCommunicate {
+        serialized_request: serialized.clone(),
+    };
+
+    let mut request = Request::new(req_msg);
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    println!("Reply JSON: {}", response.serialized_reply);
+
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
+pub async fn get_credit_points(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "GetCreditPoints";
+    let serialized = format!(
+        "{{\"{}\": null}}",
+        end_point
+    );
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
+pub async fn get_token_api(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "GetTokenAPI";
+    let serialized = format!(
+        "{{\"{}\": null}}",
+        end_point
+    );
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
+pub async fn refresh_token_api(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "RefreshTokenAPI";
+    let serialized = format!(
+        "{{\"{}\": null}}",
+        end_point
+    );
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::from_filename(".env").ok();
@@ -248,8 +519,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let order_id = std::env::var("TEST_ORDER_ID")?;
     let access_id = std::env::var("TEST_ACCESS_ID")?;
     let amount: i32 = std::env::var("TEST_PAYMENT_AMOUNT")?.parse()?;
+    let project_name: &str = "utils_sleep";
+    let file_name: &str = "sleep_30s.sh";
 
-
+    let command_string = "bash run.sh";
+    let project_name = "utils_sleep";
+    let input_files = vec!["run.sh"];
+    let output_files = vec!["output.txt", "checkpoints.cp"];
     /*println!("{}", url);
     println!("{}", username);
     println!("{}", user_id);
@@ -296,12 +572,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     /*
     LIST OF PROJECTS TESTING
-    */
-
+    
     match list_of_projects(&mut client, &email, &token_auth).await {
         Ok(response_json) => println!("ListOfProjects response:\n{}", response_json),
         Err(e) => eprintln!("Error calling ListOfProjects: {}", e),
     }
+    */
+    /*
+    LIST OF PROJECT FILES TESTING
+    match list_of_project_files(&mut client, &email, &token_auth,&project_name).await {
+        Ok(response_json) => println!("ListOfProjectfiles response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling ListOfProjects: {}", e),
+    }
+    */
+    
+    /*
+    LIST OF EXAMPLE PROJECTS TESTING
+    
+    match list_of_example_projects(&mut client, &email, &token_auth).await {
+        Ok(response_json) => println!("ListOfExampleProjects response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling ListOfProjects: {}", e),
+    }
+    
+    */
 
+    /*
+    IMPORT EXAMPLE PROJECT TESTING
+    match import_example_project(&mut client, &email, &token_auth,&project_name).await {
+        Ok(response_json) => println!("ImportExampleProject response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling ImportExampleProject: {}", e),
+    }
+    */
+    /*
+    GET PROJECT FILES TESTING
+    let result = get_project_files(&mut client, &email, &token_auth, &project_name, &file_name).await;
+    match result {
+        Ok(response_json) => println!("GetProjectFiles response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetProjectFiles: {}", e),
+    }
+    */
+    /*
+    SUBMIT PROJECT TESTING
+
+    match submit_job(&mut client, &email,&token_auth,command_string,project_name,&input_files,&output_files).await {
+        Ok(response_json) => println!("SubmitJob response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling SubmitJob: {}", e),
+    }
+    */
+    /*
+    GET CREDIT POINTS TESTING
+
+    match get_credit_points(&mut client, &email, &token_auth).await {
+        Ok(response_json) => println!("GetCreditPoints response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetCreditPoints: {}", e),
+    }
+    */
+    /*
+    GET TOKEN API TESTING
+    match get_token_api(&mut client, &email, &token_auth).await {
+        Ok(response_json) => println!("GetTokenAPI response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetTokenAPI: {}", e),
+    }
+    */
+    /*
+        REFRESH TOKEN API TESTING
+        
+        match refresh_token_api(&mut client, &email, &token_auth).await {
+            Ok(response_json) => println!("RefreshTokenAPI response:\n{}", response_json),
+            Err(e) => eprintln!("Error calling RefreshTokenAPI: {}", e),
+        }
+        
+    */
     Ok(())
 }
