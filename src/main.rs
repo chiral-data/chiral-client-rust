@@ -68,19 +68,18 @@ pub async fn confirm_payment(client: &mut ChiralClient<Channel>, email : &str, t
     Ok(response)
 }
 
-*/
 async fn call_endpoint(client: &mut ChiralClient<Channel>,end_point: &str,payload: serde_json::Value,email: &str,token_auth: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let content = serde_json::to_string(&serde_json::json!({ end_point: payload }))?;
-
+    
     let mut request = Request::new(RequestUserCommunicate {
         serialized_request: content,
     });
-
+    
     request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
     request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
-
+    
     let reply = client.user_communicate(request).await?.into_inner();
-
+    
     if reply.success {
         let data: serde_json::Value = serde_json::from_str(&reply.serialized_reply)?;
         Ok(data[end_point].clone())
@@ -88,15 +87,16 @@ async fn call_endpoint(client: &mut ChiralClient<Channel>,end_point: &str,payloa
         Err(format!("Server error: {}", reply.error).into())
     }
 }
+*/
 
 pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, job_type_name: &str, index: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitTestJob";
-
+    
     // Create payload
     let payload = json!({
         end_point: [job_type_name, index]
     });
-
+    
     let serialized = serde_json::to_string(&payload)?;
 
     let req_msg = RequestUserCommunicate {
