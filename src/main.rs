@@ -11,6 +11,7 @@ use chiral::chiral_client::ChiralClient;
 use chiral::{HelloRequest, RequestUserCommunicate};
 
 async fn create_client(url: &str) -> Result<ChiralClient<Channel>, Box<dyn std::error::Error>> {
+    println!("creating client..");
     Ok(ChiralClient::connect(url.to_string()).await?)
 }
 /*
@@ -132,6 +133,48 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
     Err("Unexpected empty response from server".into())
 }
 
+pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, offset: u32, count_per_page: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
+    println!("hello");
+    let serialized = format!(
+        "{{\"{}\": [{}, {}]}}",
+        end_point, offset, count_per_page
+    );
+
+    let req_msg = RequestUserCommunicate {
+        serialized_request: serialized.clone(),
+    };
+
+    println!("Sending payload: {}", serialized); 
+
+    let mut request = Request::new(req_msg);
+    request
+        .metadata_mut()
+        .insert("user_id", MetadataValue::from_str(email)?);
+    request
+        .metadata_mut()
+        .insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    println!("Reply JSON: {}", response.serialized_reply);
+
+
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::from_filename(".env").ok();
@@ -142,10 +185,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token_auth = std::env::var("TEST_TOKEN_AUTH")?;
     let token_api = std::env::var("TEST_TOKEN_API")?;
     let mut client = create_client(&url).await?;
+    println!("client created");
 
     let order_id = std::env::var("TEST_ORDER_ID")?;
     let access_id = std::env::var("TEST_ACCESS_ID")?;
-    let amount: i32 = std::env::var("TEST_AMOUNT")?.parse()?;
+    let amount: i32 = std::env::var("TEST_PAYMENT_AMOUNT")?.parse()?;
 
 
     /*println!("{}", url);
@@ -154,6 +198,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", email);
     println!("{}", token_auth);
     println!("{}", token_api);
+    */
+
+    /*
+    SUBMIT TEST JOB TESTING
     */
     let job_type_name = "gromacs_bench_mem"; // Or any other job type you want to test
     let index = 0;
@@ -165,20 +213,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(response_json) => println!("Server response: {}", response_json),
         Err(e) => eprintln!(" Error: {}", e),
     }
-   /*
-
-    let email = "user@example.com";
-    let token = "auth_token_value";
-
-    let result = call_endpoint(
-        &mut client,
-        "SubmitTestJob",
-        serde_json::json!(["gromacs_bench_mem", 0]),
-        email,
-        token
-    ).await?;
-
-    println!("SubmitTestJob response: {}", result);
+    
+    /*
+   
+    GET JOBS TESTING
     */
+    let result = get_jobs(&mut client, &email, &token_auth, 0, 10).await;
+
+    match result {
+        Ok(response_json) => println!("GetJobs response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetJobs: {}", e),
+    }
+
+    
+    /**/
     Ok(())
 }
