@@ -184,7 +184,7 @@ pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth
 
     let response = client.user_communicate(request).await?.into_inner();
 
-     if !response.serialized_reply.trim().is_empty() {
+    if !response.serialized_reply.trim().is_empty() {
         let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
         if let Some(result) = parsed.get(end_point) {
             return Ok(result.clone());
@@ -200,6 +200,38 @@ pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth
     Err("Unexpected empty response from server".into())
 }
 
+pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "ListOfProjects";
+    let serialized = format!(
+        "{{\"{}\": null}}",
+        end_point
+    );
+
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request : serialized.clone(),
+    }; 
+    let mut request = Request::new(req_msg);
+
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+    if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -262,6 +294,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     */
     
+    /*
+    LIST OF PROJECTS TESTING
+    */
+
+    match list_of_projects(&mut client, &email, &token_auth).await {
+        Ok(response_json) => println!("ListOfProjects response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling ListOfProjects: {}", e),
+    }
 
     Ok(())
 }
