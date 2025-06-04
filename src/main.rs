@@ -104,12 +104,8 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
     };
 
     let mut request = Request::new(req_msg);
-    request
-        .metadata_mut()
-        .insert("user_id", MetadataValue::from_str(email)?);
-    request
-        .metadata_mut()
-        .insert("auth_token", MetadataValue::from_str(token_auth)?);
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
 
     // Await gRPC call
     let response = client.user_communicate(request).await?.into_inner();
@@ -147,12 +143,8 @@ pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_aut
     println!("Sending payload: {}", serialized); 
 
     let mut request = Request::new(req_msg);
-    request
-        .metadata_mut()
-        .insert("user_id", MetadataValue::from_str(email)?);
-    request
-        .metadata_mut()
-        .insert("auth_token", MetadataValue::from_str(token_auth)?);
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
 
     let response = client.user_communicate(request).await?.into_inner();
     println!("Reply JSON: {}", response.serialized_reply);
@@ -174,6 +166,40 @@ pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_aut
     Err("Unexpected empty response from server".into())
 
 }
+
+pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str,job_id: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
+    let end_point = "GetJob";
+    let serialized = format!(
+    "{{\"{}\": \"{}\"}}",
+    end_point, job_id
+    );
+
+    let req_msg = RequestUserCommunicate{
+        serialized_request: serialized.clone(),
+    };
+
+    let mut request = Request::new(req_msg);
+    request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
+    request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
+
+    let response = client.user_communicate(request).await?.into_inner();
+
+     if !response.serialized_reply.trim().is_empty() {
+        let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
+        if let Some(result) = parsed.get(end_point) {
+            return Ok(result.clone());
+        } else {
+            return Err("Missing endpoint data in server response".into());
+        }
+    }
+
+    if !response.error.trim().is_empty() {
+        return Err(format!("Server error: {}", response.error).into());
+    }
+
+    Err("Unexpected empty response from server".into())
+}
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -202,30 +228,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     /*
     SUBMIT TEST JOB TESTING
-    */
     let job_type_name = "gromacs_bench_mem"; // Or any other job type you want to test
     let index = 0;
-
+    
     let result = submit_test_job(&mut client, &email, &token_auth, job_type_name, index).await;
-
+    
     // Print result
     match result {
         Ok(response_json) => println!("Server response: {}", response_json),
         Err(e) => eprintln!(" Error: {}", e),
     }
+    */
     
     /*
    
     GET JOBS TESTING
-    */
     let result = get_jobs(&mut client, &email, &token_auth, 0, 10).await;
-
+    
     match result {
         Ok(response_json) => println!("GetJobs response:\n{}", response_json),
         Err(e) => eprintln!("Error calling GetJobs: {}", e),
     }
-
+    */
     
-    /**/
+    /*
+    GET JOB TESTING
+    let job_id = "jsefa3v6fs7smgikxwlplisrgvxacod7"; // Replace with a real job ID
+    let result = get_job(&mut client, &email, &token_auth, job_id).await;
+    
+    match result {
+        Ok(response_json) => println!("GetJob response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetJob: {}", e),
+    }
+    */
+    
+
     Ok(())
 }
