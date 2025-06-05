@@ -1,7 +1,3 @@
-use tonic::transport::Channel;
-use tonic::{Request, metadata::MetadataValue, metadata::MetadataMap};
-use std::str::FromStr;
-use serde_json::json;
 use rand::prelude::SliceRandom;
 use rand::Rng;
 
@@ -27,44 +23,39 @@ use api::{
     submit_job,
 };
 
-use chiral::chiral_client::ChiralClient;
-use chiral::{HelloRequest, RequestUserCommunicate};
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::from_filename(".env").ok();
     let url = std::env::var("CHIRAL_STAGING_API_URL")?;
-    let user_id = std::env::var("TEST_ID")?;
-    let username = std::env::var("TEST_USERNAME")?;
+    let _user_id = std::env::var("TEST_ID")?;
+    let _username = std::env::var("TEST_USERNAME")?;
     let email = std::env::var("TEST_EMAIL")?;
     let token_auth = std::env::var("TEST_TOKEN_AUTH")?;
-    let token_api = std::env::var("TEST_TOKEN_API")?;
+    let _token_api = std::env::var("TEST_TOKEN_API")?;
     
-    let order_id = std::env::var("TEST_ORDER_ID")?;
-    let access_id = std::env::var("TEST_ACCESS_ID")?;
-    let amount: i32 = std::env::var("TEST_PAYMENT_AMOUNT")?.parse()?;
-    let project_name: &str = "qCEnc6q";
-    let file_name: &str = "sleep_30s.sh";
-    let index: u32 = 1;
-    let command_string = "bash run.sh";
+    let _order_id = std::env::var("TEST_ORDER_ID")?;
+    let _access_id = std::env::var("TEST_ACCESS_ID")?;
+    let _amount: i32 = std::env::var("TEST_PAYMENT_AMOUNT")?.parse()?;
+    let _project_name: &str = "qCEnc6q";
+    let _file_name: &str = "sleep_30s.sh";
+    let _index: u32 = 1;
+    let _command_string = "bash run.sh";
     let input_files = vec!["run.sh", "1aki.pdb"];
     
     let output_files = vec!["1AKI_processed.gro", "topol.top", "posre.itp"];
-    let job_types = vec![
-        "sleep_5_secs", 
-        "gromacs_bench_mem", 
-    ];
+    let job_types = ["sleep_5_secs", 
+        "gromacs_bench_mem"];
     let job_type_name = job_types.choose(&mut rand::thread_rng()).unwrap();
     let index: u32 = rand::thread_rng().gen_range(0..5);
     let mut client = create_client(&url).await?;
     println!("client created");
 
-    // Get credit points
     let points = get_credit_points(&mut client, &email, &token_auth).await?;
     println!("User {} has {} points", email, points);
 
-    // Get and refresh token API
+
     let token_api = get_token_api(&mut client, &email, &token_auth).await?;
     println!("Token API: {}", token_api);
 
@@ -77,7 +68,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(response_json) => {
             println!("SubmitTestJob response:\n{}", response_json);
             
-            // If the response is just a plain string like `"abc123"`, strip the quotes
             if let Some(stripped) = response_json.as_str() {
                 stripped.to_string()
             } else {
@@ -100,7 +90,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => eprintln!("Error calling GetJobs: {}", e),
     }
 
-    // === GET JOB ===
     let get_job_result = get_job(&mut client, &email, &token_auth, &job_id).await;
 
     match get_job_result {
@@ -108,7 +97,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => eprintln!("Error calling GetJob: {}", e),
     }
 
-    // List projects
     let projects = list_of_projects(&mut client, &email, &token_auth).await?;
     if let Some(projects_array) = projects.as_array() {
         println!("User has {} project(s)", projects_array.len());
@@ -117,17 +105,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
 
-    // List and import example projects
     let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await?;
     println!("Available example projects: {:?}", example_projects);
-    // For projects
+
     if let Some(projects_array) = projects.as_array() {
         println!("User has {} project(s)", projects_array.len());
     } else {
         println!("Projects is not an array: {:?}", projects);
     }
 
-    // For example_projects
     if let Some(example_projects_array) = example_projects.as_array() {
         println!("Available example projects: {:?}", example_projects_array);
         if let Some(project_name_val) = example_projects_array.first() {
@@ -135,7 +121,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 import_example_project(&mut client, &email, &token_auth, project_name).await?;
                 println!("Imported example project: {}", project_name);
 
-                // Remaining logic stays the same
                 let project_files = list_of_project_files(&mut client, &email, &token_auth, project_name).await?;
                 println!("Project {} has files: {:?}", project_name, project_files);
 
