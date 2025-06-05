@@ -2,6 +2,8 @@ use tonic::transport::Channel;
 use tonic::{Request, metadata::MetadataValue, metadata::MetadataMap};
 use std::str::FromStr;
 use serde_json::json;
+use rand::prelude::SliceRandom;
+use rand::Rng;
 
 pub mod chiral {
     tonic::include_proto!("chiral"); 
@@ -47,8 +49,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let index: u32 = 1;
     let command_string = "bash run.sh";
     let input_files = vec!["run.sh", "1aki.pdb"];
+    
     let output_files = vec!["1AKI_processed.gro", "topol.top", "posre.itp"];
-    let job_type_name = "gromacs_bench_mem";
+    let job_types = vec![
+        "sleep_5_secs", 
+        "gromacs_bench_mem", 
+    ];
+    let job_type_name = job_types.choose(&mut rand::thread_rng()).unwrap();
+    let index: u32 = rand::thread_rng().gen_range(0..5);
     let mut client = create_client(&url).await?;
     println!("client created");
 
@@ -64,15 +72,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Refreshed token: {}", refreshed_token);
 
     let submit_result = submit_test_job(&mut client, &email, &token_auth, job_type_name, index).await;
-    
+
     let job_id = match submit_result {
         Ok(response_json) => {
             println!("SubmitTestJob response:\n{}", response_json);
-            // Try to extract job_id if available
-            if let Some(job_id) = response_json.get("job_id").and_then(|id| id.as_str()) {
-                job_id.to_string()
+            
+            // If the response is just a plain string like `"abc123"`, strip the quotes
+            if let Some(stripped) = response_json.as_str() {
+                stripped.to_string()
             } else {
-                eprintln!("No job_id found in response.");
+                eprintln!("Response is not a plain string.");
                 return Ok(());
             }
         },
@@ -81,6 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     };
+
 
 
     let jobs_result = get_jobs(&mut client, &email, &token_auth, 0, 10).await;
