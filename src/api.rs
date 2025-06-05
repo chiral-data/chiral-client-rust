@@ -1,5 +1,5 @@
 use tonic::transport::Channel;
-use tonic::{Request, metadata::MetadataValue, metadata::MetadataMap};
+use tonic::{Request, metadata::MetadataValue};
 use std::str::FromStr;
 use serde_json::json;
 
@@ -8,7 +8,7 @@ pub mod chiral {
 }
 
 use chiral::chiral_client::ChiralClient;
-use chiral::{HelloRequest, RequestUserCommunicate};
+use chiral::RequestUserCommunicate;
 
 pub async fn create_client(url: &str) -> Result<ChiralClient<Channel>, Box<dyn std::error::Error>> {
     println!("creating client..");
@@ -92,7 +92,6 @@ async fn call_endpoint(client: &mut ChiralClient<Channel>,end_point: &str,payloa
 pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, job_type_name: &str, index: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitTestJob";
     
-    // Create payload
     let payload = json!({
         end_point: [job_type_name, index]
     });
@@ -107,10 +106,8 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
     request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
     request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
 
-    // Await gRPC call
     let response = client.user_communicate(request).await?.into_inner();
 
-    // Check if serialized_reply is non-empty and parse it
     if !response.serialized_reply.trim().is_empty() {
         let parsed: serde_json::Value = serde_json::from_str(&response.serialized_reply)?;
 
@@ -121,7 +118,6 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
         }
     }
 
-    // If the serialized reply is empty, check for an error
     if !response.error.trim().is_empty() {
         return Err(format!("Server error: {}", response.error).into());
     }
@@ -130,7 +126,7 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
 }
 
 pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, offset: u32, count_per_page: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
-    let end_point = "GetJobs";
+    let _end_point = "GetJobs";
     let serialized = format!(
         "{{\"{}\": [{}, {}]}}",
         end_point, offset, count_per_page
@@ -332,7 +328,7 @@ pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &
 }
 
 pub async fn get_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str, file_name: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
-    let end_point = "GetProjectFile";
+    let _end_point = "GetProjectFile";
     let serialized = format!(
         "{{\"{}\": [\"{}\", \"{}\"]}}",
         end_point, project_name, file_name
