@@ -29,10 +29,6 @@ use chiral::chiral_client::ChiralClient;
 use chiral::{HelloRequest, RequestUserCommunicate};
 
 
-
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::from_filename(".env").ok();
@@ -46,11 +42,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let order_id = std::env::var("TEST_ORDER_ID")?;
     let access_id = std::env::var("TEST_ACCESS_ID")?;
     let amount: i32 = std::env::var("TEST_PAYMENT_AMOUNT")?.parse()?;
-    let project_name: &str = "utils_sleep";
+    let project_name: &str = "qCEnc6q";
     let file_name: &str = "sleep_30s.sh";
-    
+    let index: u32 = 1;
     let command_string = "bash run.sh";
-    let project_name = "utils_sleep";
     let input_files = vec!["run.sh", "1aki.pdb"];
     let output_files = vec!["1AKI_processed.gro", "topol.top", "posre.itp"];
     let job_type_name = "gromacs_bench_mem";
@@ -68,39 +63,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let refreshed_token = refresh_token_api(&mut client, &email, &token_auth).await?;
     println!("Refreshed token: {}", refreshed_token);
 
-    // Submit 5 test jobs
-    for i in 0..5 {
-        let job_id = submit_test_job(&mut client, &email, &token_auth, job_type_name, i).await?;
-        println!("Test job {} submitted, the ID is {}", job_type_name, job_id);
-    }
-
-    // Poll the list of jobs 60 times (once per second)
-    for k in 0..60 {
-        let jobs = get_jobs(&mut client, &email, &token_auth, 0, 10).await?;
-
-        if let Some(jobs_array) = jobs.as_array() {
-            println!("{}: get jobs {}", k, jobs_array.len());
-
-            for (j, job) in jobs_array.iter().enumerate() {
-                let job_id = job.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                let status = job.get("status").and_then(|v| v.as_str()).unwrap_or("unknown");
-
-                println!("get job {}: {} {}", j, job_id, status);
+    let submit_result = submit_test_job(&mut client, &email, &token_auth, job_type_name, index).await;
+    
+    let job_id = match submit_result {
+        Ok(response_json) => {
+            println!("SubmitTestJob response:\n{}", response_json);
+            // Try to extract job_id if available
+            if let Some(job_id) = response_json.get("job_id").and_then(|id| id.as_str()) {
+                job_id.to_string()
+            } else {
+                eprintln!("No job_id found in response.");
+                return Ok(());
             }
-
-        } else {
-            println!("Unexpected format when fetching jobs: {}", jobs);
+        },
+        Err(e) => {
+            eprintln!("Error calling SubmitTestJob: {}", e);
+            return Ok(());
         }
+    };
 
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+    let jobs_result = get_jobs(&mut client, &email, &token_auth, 0, 10).await;
+
+    match jobs_result {
+        Ok(response_json) => println!("GetJobs response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetJobs: {}", e),
     }
 
-    // Submit one more test job with index 5
-    let job_id = submit_test_job(&mut client, &email, &token_auth, job_type_name, 5).await?;
-    println!("Final test job {} submitted, the ID is {}", job_type_name, job_id);
+    // === GET JOB ===
+    let get_job_result = get_job(&mut client, &email, &token_auth, &job_id).await;
 
-
-
+    match get_job_result {
+        Ok(response_json) => println!("GetJob response:\n{}", response_json),
+        Err(e) => eprintln!("Error calling GetJob: {}", e),
+    }
 
     // List projects
     let projects = list_of_projects(&mut client, &email, &token_auth).await?;
