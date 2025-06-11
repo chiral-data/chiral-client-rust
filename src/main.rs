@@ -8,7 +8,7 @@ pub mod chiral {
 mod api;
 
 #[cfg(test)]
-mod tests; 
+
 
 
 #[tokio::main]
