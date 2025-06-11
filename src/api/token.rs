@@ -72,3 +72,34 @@ pub async fn refresh_token_api(client: &mut ChiralClient<Channel>, email: &str, 
 
         Err("Unexpected empty response from server".into())
 }
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use crate::api::create_client;
+    use dotenvy;
+
+    #[tokio::test]
+    async fn test_get_token_api(){
+        dotenvy::from_filename(".env").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
+        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
+
+        let mut client = create_client(&url).await.expect("Failed to create API client.");
+        let token_api = get_token_api(&mut client, &email, &token_auth).await.expect("Getting Token Failed");
+        assert!(!token_api.is_null(), "Returned token API is null");
+    }
+
+    #[tokio::test]
+    async fn test_refresh_token_api(){
+        dotenvy::from_filename(".env").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
+        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
+
+        let mut client = create_client(&url).await.expect("Failed to create API client.");
+        let refreshed_token = refresh_token_api(&mut client, &email, &token_auth).await.expect("Failed to refresh Token");
+        assert!(!refreshed_token.is_null(),"Refreshed token API is null");
+    }
+}
