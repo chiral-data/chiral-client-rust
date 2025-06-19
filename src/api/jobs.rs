@@ -4,11 +4,7 @@ use std::str::FromStr;
 use serde_json::json;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
-
-
-pub mod chiral {
-    tonic::include_proto!("chiral"); 
-}
+use crate::proto::chiral; 
 
 
 pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, job_type_name: &str, index: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {

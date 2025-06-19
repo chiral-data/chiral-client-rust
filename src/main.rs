@@ -1,14 +1,8 @@
 use rand::prelude::SliceRandom;
 use rand::Rng;
-
-pub mod chiral {
-    tonic::include_proto!("chiral"); 
-}
-
+pub mod proto; 
+pub use crate::proto::chiral;
 mod api;
-
-#[cfg(test)]
-
 
 
 #[tokio::main]
@@ -37,6 +31,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _index: u32 = rand::thread_rng().gen_range(0..5);
  
 
-    
     Ok(())
 }

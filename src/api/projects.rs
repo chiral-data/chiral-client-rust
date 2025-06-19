@@ -3,11 +3,7 @@ use tonic::{Request, metadata::MetadataValue};
 use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
-
-
-pub mod chiral {
-    tonic::include_proto!("chiral"); 
-}
+use crate::proto::chiral; 
 
 
 pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
@@ -393,6 +389,4 @@ mod tests{
 
         assert!(success, "No project file could be successfully fetched and validated.");
     }
-
-
 }

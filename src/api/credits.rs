@@ -3,11 +3,8 @@ use tonic::{Request, metadata::MetadataValue};
 use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
+use crate::proto::chiral; 
 
-
-pub mod chiral {
-    tonic::include_proto!("chiral"); 
-}
 
 
 pub async fn get_credit_points(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
