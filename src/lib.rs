@@ -7,3 +7,4 @@ pub use crate::proto::chiral;
 pub mod api;
 
 pub use api::create_client;
+pub use api::get_credit_points;
