@@ -4,9 +4,8 @@ use std::str::FromStr;
 use serde_json::json;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
-use crate::proto::chiral; 
 
-
+#[allow(dead_code)]
 pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, job_type_name: &str, index: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitTestJob";
     
@@ -43,6 +42,7 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
     Err("Unexpected empty response from server".into())
 }
 
+#[allow(dead_code)]
 pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, offset: u32, count_per_page: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
     let _end_point = "GetJobs";
     let serialized = format!(
@@ -81,6 +81,7 @@ pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_aut
 
 }
 
+#[allow(dead_code)]
 pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str,job_id: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "GetJob";
     let serialized = format!(
@@ -113,6 +114,8 @@ pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth
 
     Err("Unexpected empty response from server".into())
 }
+
+#[allow(dead_code)]
 pub async fn submit_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, command_string: &str, project_name: &str, input_files: &[&str], output_files: &[&str]) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitJob";
 

@@ -3,9 +3,8 @@ use tonic::{Request, metadata::MetadataValue};
 use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
-use crate::proto::chiral; 
 
-
+#[allow(dead_code)]
 pub async fn get_token_api(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
         let end_point = "GetTokenAPI";
         let serialized = format!(
@@ -38,6 +37,7 @@ pub async fn get_token_api(client: &mut ChiralClient<Channel>, email: &str, toke
         Err("Unexpected empty response from server".into())
 }
 
+#[allow(dead_code)]
 pub async fn refresh_token_api(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
         let end_point = "RefreshTokenAPI";
         let serialized = format!(
