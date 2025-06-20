@@ -8,3 +8,7 @@ pub mod api;
 
 pub use api::create_client;
 pub use api::get_credit_points;
+pub use api::{
+    submit_job,
+    get_job,
+};
