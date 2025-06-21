@@ -4,11 +4,6 @@ use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
-
-pub mod chiral {
-    tonic::include_proto!("chiral"); 
-}
-
 pub async fn get_token_api(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
         let end_point = "GetTokenAPI";
         let serialized = format!(
