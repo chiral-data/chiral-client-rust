@@ -29,7 +29,7 @@ async fn full_project_flow_integration_test() {
     let first_example = example_projects
         .as_array()
         .expect("Expected example projects to be an array")
-        .get(0)
+        .first()
         .and_then(|v| v.as_str())
         .expect("No example project available");
 
@@ -59,7 +59,7 @@ async fn full_project_flow_integration_test() {
     let first_file = file_list
         .as_array()
         .expect("Expected file list to be an array")
-        .get(0)
+        .first()
         .and_then(|v| v.as_str())
         .expect("No files found in the example project");
 

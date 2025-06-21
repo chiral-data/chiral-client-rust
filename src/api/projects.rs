@@ -4,7 +4,6 @@ use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
-#[allow(dead_code)]
 pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjects";
     let serialized = format!(
@@ -38,7 +37,6 @@ pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, t
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
 pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfExampleProjects";
     let serialized = format!(
@@ -71,7 +69,6 @@ pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email:
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
 pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjectFiles";
     let serialized = format!(
@@ -105,7 +102,6 @@ pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &s
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
 pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ImportExampleProject";
     let serialized = format!(
@@ -139,7 +135,6 @@ pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
 pub async fn get_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str, file_name: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let _end_point = "GetJobs";
     let end_point = "GetProjectFile";
     let serialized = format!(
@@ -333,6 +328,7 @@ mod tests{
     }
     
     #[tokio::test]
+    #[ignore]
     async fn test_get_project_files() {
         dotenvy::from_filename(".env").ok();
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL is not set");
