@@ -5,7 +5,6 @@ use serde_json::json;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
-#[allow(dead_code)]
 pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, job_type_name: &str, index: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitTestJob";
     
@@ -42,7 +41,6 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
 pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, offset: u32, count_per_page: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
     let _end_point = "GetJobs";
     let serialized = format!(

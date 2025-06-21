@@ -1,4 +1,4 @@
-use chiral_client_rust::{create_client, get_credit_points};
+use chiral_client::{create_client, get_credit_points};
 mod common;
 
 #[tokio::test]

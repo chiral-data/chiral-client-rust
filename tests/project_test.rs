@@ -1,4 +1,4 @@
-use chiral_client_rust::{
+use chiral_client::{
     create_client,
     list_of_projects,
     list_of_example_projects,

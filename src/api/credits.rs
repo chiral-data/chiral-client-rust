@@ -5,7 +5,6 @@ use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
 
-#[allow(dead_code)]
 pub async fn get_credit_points(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "GetCreditPoints";
     let serialized = format!(
