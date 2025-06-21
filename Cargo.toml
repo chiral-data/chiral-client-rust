@@ -1,7 +1,15 @@
 [package]
-name = "chiral-client-rust"
+name = "chiral-client"
 version = "0.1.0"
 edition = "2024"
+authors = ["Chiral Ltd. <dev@chiral.one>"]
+license = "MPL-2.0"
+description = "Chiral Service Rust SDK"
+repository = "https://github.com/chiral-data/chiral-client-rust"
+homepage = "https://github.com/chiral-data/chiral-client-rust"
+documentation = "https://www.chiral.one"
+keywords = ["chiral", "rust", "sdk"]
+categories = ["api-bindings"]
 
 [dependencies]
 tonic = "0.11"
@@ -15,3 +23,6 @@ rand = "0.8"
 [build-dependencies]
 tonic-build = "0.11"
 prost-build = "0.12"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
