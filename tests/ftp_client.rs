@@ -100,4 +100,54 @@ fn test_make_and_change_directory() {
     client.disconnect();
 }
 
+#[test]
+fn test_recursive_delete_directory() {
+    dotenv().ok();
+    println!("Loaded .env configuration");
 
+    let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
+    let ftp_port: u16 = env::var("FTP_PORT")
+        .expect("FTP_PORT not set")
+        .parse()
+        .expect("FTP_PORT must be a valid number");
+    let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
+    let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
+    let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+
+    let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+
+    // Generate unique test directories
+    let uuid = Uuid::new_v4();
+    let root_dir = format!("upload/test_del_{}", uuid);
+    let sub_dir = format!("{}/nested", root_dir);
+
+    // Create directory structure on FTP
+    client.make_directory("upload").ok(); // ignore error if exists
+    client.make_directory(&root_dir).expect("Could not create root dir");
+    client.make_directory(&sub_dir).expect("Could not create nested dir");
+
+    // Create and upload two files (one in each dir)
+    let file1 = "temp_root.txt";
+    let file2 = "temp_nested.txt";
+    fs::write(file1, "Root level file").unwrap();
+    fs::write(file2, "Nested file").unwrap();
+
+    let remote1: String = format!("{}/file1.txt", root_dir);
+    let remote2 = format!("{}/file2.txt", sub_dir);
+    client.upload_file(file1, &remote1).expect("Upload file1 failed");
+    client.upload_file(file2, &remote2).expect("Upload file2 failed");
+
+    println!("Files uploaded to test directories");
+
+    // Delete everything
+    client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
+    println!("Recursive deletion complete for {}", root_dir);
+
+    // Local cleanup
+    fs::remove_file(file1).ok();
+    fs::remove_file(file2).ok();
+
+    client.disconnect();
+    println!("Disconnected");
+}

@@ -137,41 +137,96 @@ impl FtpClient {
     }
 
     pub fn remove_directory_recursive(&mut self, dir_path: &str) -> Result<(), ftp::FtpError> {
-        let mut ftp_stream = self.ftp.take().ok_or_else(|| {
+        let ftp_stream = self.ftp.as_mut().ok_or_else(|| {
             ftp::FtpError::ConnectionError(std::io::Error::new(
                 std::io::ErrorKind::NotConnected,
                 "Not connected to FTP server",
             ))
         })?;
 
-        ftp_stream.cwd(dir_path)?;
+        Self::delete_recursive(ftp_stream, dir_path)
+    }
 
-        let entries = ftp_stream.nlst(None)?;
-
+    fn delete_recursive(ftp: &mut FtpStream, dir_path: &str) -> Result<(), ftp::FtpError> {
+        println!("Processing directory: {}", dir_path);
+        
+        let entries = match ftp.nlst(Some(dir_path)) {
+            Ok(entries) => entries,
+            Err(e) => {
+                println!("Could not list directory {}: {:?}", dir_path, e);
+                return Err(e);
+            }
+        };
+        
+        println!("Found {} entries in {}", entries.len(), dir_path);
+        
         for entry in entries {
-            if ftp_stream.cwd(&entry).is_ok() {
-                ftp_stream.cdup()?; 
-                let subdir_path = format!("{}/{}", dir_path, entry);
-                
-                self.ftp = Some(ftp_stream);
-                self.remove_directory_recursive(&subdir_path)?;
-                ftp_stream = self.ftp.take().unwrap(); 
+            if entry.ends_with("/.") || entry.ends_with("/..") {
+                continue;
+            }
+            
+            let entry_name = if entry.starts_with(dir_path) {
+                entry.strip_prefix(dir_path)
+                    .unwrap_or(&entry)
+                    .trim_start_matches('/')
+            } else if entry.contains('/') {
+                entry.split('/').last().unwrap_or(&entry)
             } else {
-                let file_path = format!("{}/{}", dir_path, entry);
-                ftp_stream.rm(&file_path)?;
+                &entry
+            };
+            
+            if entry_name.is_empty() || entry_name == "." || entry_name == ".." {
+                continue;
+            }
+            
+            let full_path = format!("{}/{}", dir_path.trim_end_matches('/'), entry_name);
+            
+            match ftp.size(&full_path) {
+                Ok(size) => {
+                    println!("Deleting file: {} (size: {:?} bytes)", full_path, size);
+                    match ftp.rm(&full_path) {
+                        Ok(_) => println!("Deleted file: {}", full_path),
+                        Err(e) => {
+                            println!("Failed to delete file {}: {:?}", full_path, e);
+                            return Err(e);
+                        }
+                    }
+                },
+                Err(_) => {
+                    match ftp.nlst(Some(&full_path)) {
+                        Ok(_) => {
+                            println!("Found subdirectory: {}", full_path);
+                            Self::delete_recursive(ftp, &full_path)?;
+                        },
+                        Err(_) => {
+                            println!("Attempting to delete as file: {}", full_path);
+                            match ftp.rm(&full_path) {
+                                Ok(_) => println!("Deleted file: {}", full_path),
+                                Err(e) => {
+                                    println!("Could not delete {}: {:?}", full_path, e);
+                                    return Err(e);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-
-        ftp_stream.cdup()?;
-        ftp_stream.rmdir(dir_path)?;
-
-        println!("Removed directory recursively: {}", dir_path);
-
-        self.ftp = Some(ftp_stream);
-
-        Ok(())
+        
+        println!("Removing directory: {}", dir_path);
+        match ftp.rmdir(dir_path) {
+            Ok(_) => {
+                println!("Successfully deleted directory: {}", dir_path);
+                Ok(())
+            },
+            Err(e) => {
+                println!("Failed to delete directory {}: {:?}", dir_path, e);
+                Err(e)
+            }
+        }
     }
-    
+
+
     pub fn remove_file(&mut self, path: &str) -> Result<(), ftp::FtpError> {
     let ftp_stream = self.ftp.as_mut().ok_or_else(|| {
         ftp::FtpError::ConnectionError(std::io::Error::new(
