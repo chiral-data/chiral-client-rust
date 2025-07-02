@@ -1,14 +1,13 @@
 use ftp::FtpStream;
 use std::fs::File;
-use std::io::{Write};
+use std::io::Write;
 
-#[warn(dead_code)]
-#[derive(Debug, PartialEq)]
-enum PathType {
-    NotExist,
-    File,
-    Directory,
-}
+// #[derive(Debug, PartialEq)]
+// enum PathType {
+//     NotExist,
+//     File,
+//     Directory,
+// }
 
 pub struct FtpClient {
     ftp_addr: String,

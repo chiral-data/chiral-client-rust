@@ -1,5 +1,5 @@
 
-use chiral_client_rust::create_client;
+use chiral_client::create_client;
 mod common;
 
 #[tokio::test]
