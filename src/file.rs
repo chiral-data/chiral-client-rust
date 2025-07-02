@@ -2,8 +2,11 @@
 // because the crate "ftp" is used and it will create confusion.
 
 use ftp::FtpStream;
-use std::fs::File;
 use std::io::Write;
+use std::fs::{self,File};
+use dotenvy::dotenv;
+use std::env;
+use uuid::Uuid;
 
 // #[derive(Debug, PartialEq)]
 // enum PathType {
@@ -45,7 +48,7 @@ impl FtpClient {
         
         // Confirm we're in the correct directory
         let current_dir = ftp_stream.pwd()?;
-        println!("Connected and changed to directory: {}", current_dir);
+        println!("Connected and changed to directory: {current_dir}");
 
         self.root_dir = Some(current_dir);
         self.ftp = Some(ftp_stream);
@@ -115,7 +118,7 @@ impl FtpClient {
         };
 
         ftp_stream.mkdir(dir_name)?;
-        println!("Created directory: {}", dir_name);
+        println!("Created directory: {dir_name}");
 
         Ok(())
     }
@@ -134,7 +137,7 @@ impl FtpClient {
         let current_dir = ftp_stream.pwd()?;
         self.root_dir = Some(current_dir.clone());
 
-        println!("Changed directory to: {}", current_dir);
+        println!("Changed directory to: {current_dir}");
 
         Ok(())
     }
@@ -151,12 +154,12 @@ impl FtpClient {
     }
 
     fn delete_recursive(ftp: &mut FtpStream, dir_path: &str) -> Result<(), ftp::FtpError> {
-        println!("Processing directory: {}", dir_path);
+        println!("Processing directory: {dir_path}");
         
         let entries = match ftp.nlst(Some(dir_path)) {
             Ok(entries) => entries,
             Err(e) => {
-                println!("Could not list directory {}: {:?}", dir_path, e);
+                println!("Could not list directory {dir_path}: {e:?}");
                 return Err(e);
             }
         };
@@ -186,11 +189,11 @@ impl FtpClient {
             
             match ftp.size(&full_path) {
                 Ok(size) => {
-                    println!("Deleting file: {} (size: {:?} bytes)", full_path, size);
+                    println!("Deleting file: {full_path} (size: {size:?} bytes)");
                     match ftp.rm(&full_path) {
-                        Ok(_) => println!("Deleted file: {}", full_path),
+                        Ok(_) => println!("Deleted file: {full_path}"),
                         Err(e) => {
-                            println!("Failed to delete file {}: {:?}", full_path, e);
+                            println!("Failed to delete file {full_path}: {e:?}");
                             return Err(e);
                         }
                     }
@@ -198,15 +201,15 @@ impl FtpClient {
                 Err(_) => {
                     match ftp.nlst(Some(&full_path)) {
                         Ok(_) => {
-                            println!("Found subdirectory: {}", full_path);
+                            println!("Found subdirectory: {full_path}");
                             Self::delete_recursive(ftp, &full_path)?;
                         },
                         Err(_) => {
-                            println!("Attempting to delete as file: {}", full_path);
+                            println!("Attempting to delete as file: {full_path}");
                             match ftp.rm(&full_path) {
-                                Ok(_) => println!("Deleted file: {}", full_path),
+                                Ok(_) => println!("Deleted file: {full_path}"),
                                 Err(e) => {
-                                    println!("Could not delete {}: {:?}", full_path, e);
+                                    println!("Could not delete {full_path}: {e:?}");
                                     return Err(e);
                                 }
                             }
@@ -216,14 +219,14 @@ impl FtpClient {
             }
         }
         
-        println!("Removing directory: {}", dir_path);
+        println!("Removing directory: {dir_path}");
         match ftp.rmdir(dir_path) {
             Ok(_) => {
-                println!("Successfully deleted directory: {}", dir_path);
+                println!("Successfully deleted directory: {dir_path}" );
                 Ok(())
             },
             Err(e) => {
-                println!("Failed to delete directory {}: {:?}", dir_path, e);
+                println!("Failed to delete directory {dir_path}: {e:?}" );
                 Err(e)
             }
         }
@@ -248,4 +251,153 @@ impl Drop for FtpClient {
     fn drop(&mut self) {
         self.disconnect();
     }
+}
+
+
+
+#[test]
+fn test_connection() {
+    dotenv().ok(); 
+
+    let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
+    let ftp_port: u16 = env::var("FTP_PORT")
+        .expect("FTP_PORT not set")
+        .parse()
+        .expect("FTP_PORT must be a valid number");
+
+    let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
+    let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
+    let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+
+    let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+    assert!(client.is_connected());
+    client.disconnect();
+    assert!(!client.is_connected());
+}
+
+#[test]
+fn test_file_upload_and_download() {
+    dotenv().ok();
+
+    let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
+    let ftp_port: u16 = env::var("FTP_PORT")
+        .expect("FTP_PORT not set")
+        .parse()
+        .expect("FTP_PORT must be a valid number");
+
+    let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
+    let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
+    let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+
+    let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+    // Ensure 'upload' directory exists
+    client.make_directory("upload").ok();
+    // Prepare test file
+    let local_path = "test_upload.txt";
+    let mut file = File::create(local_path).unwrap();
+    writeln!(file, "Hello FTP test").unwrap();
+    let remote_path = "upload/test_upload.txt";
+
+    // Upload
+    client.upload_file(local_path, remote_path).expect("Upload failed");
+    // Download
+    let download_path = "downloaded_test_upload.txt";
+    client.download_file(remote_path, download_path).expect("Download failed");
+    // Verify
+    let content = fs::read_to_string(download_path).unwrap();
+    assert!(content.contains("Hello FTP test"));
+    // Cleanup
+    fs::remove_file(local_path).unwrap();
+    fs::remove_file(download_path).unwrap();
+    let _ = client.remove_directory_recursive(remote_path);
+    client.disconnect();
+}
+
+#[test]
+fn test_make_and_change_directory() {
+    dotenv().ok();
+
+    let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
+    let ftp_port: u16 = env::var("FTP_PORT")
+        .expect("FTP_PORT not set")
+        .parse()
+        .expect("FTP_PORT must be a valid number");
+
+    let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
+    let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
+    let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+
+    let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+
+    let parent = "upload";
+    if let Err(e) = client.make_directory(parent) {
+        println!("Warning: could not create parent dir '{}': {}", parent, e);
+    }
+
+    let uuid = Uuid::new_v4();
+    let dir = format!("upload/test_dir_{}", uuid);
+    client.make_directory(&dir).expect("Failed to create unique test_dir");
+
+    println!("Directory Made");
+
+    client.change_directory(&dir).expect("Failed to change directory");
+    println!("Directory Changed");
+
+    assert!(client.is_connected());
+    client.disconnect();
+}
+
+#[test]
+fn test_recursive_delete_directory() {
+    dotenv().ok();
+    println!("Loaded .env configuration");
+
+    let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
+    let ftp_port: u16 = env::var("FTP_PORT")
+        .expect("FTP_PORT not set")
+        .parse()
+        .expect("FTP_PORT must be a valid number");
+    let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
+    let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
+    let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+
+    let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+
+    // Generate unique test directories
+    let uuid = Uuid::new_v4();
+    let root_dir = format!("upload/test_del_{}", uuid);
+    let sub_dir = format!("{}/nested", root_dir);
+
+    // Create directory structure on FTP
+    client.make_directory("upload").ok(); // ignore error if exists
+    client.make_directory(&root_dir).expect("Could not create root dir");
+    client.make_directory(&sub_dir).expect("Could not create nested dir");
+
+    // Create and upload two files (one in each dir)
+    let file1 = "temp_root.txt";
+    let file2 = "temp_nested.txt";
+    fs::write(file1, "Root level file").unwrap();
+    fs::write(file2, "Nested file").unwrap();
+
+    let remote1: String = format!("{}/file1.txt", root_dir);
+    let remote2 = format!("{}/file2.txt", sub_dir);
+    client.upload_file(file1, &remote1).expect("Upload file1 failed");
+    client.upload_file(file2, &remote2).expect("Upload file2 failed");
+
+    println!("Files uploaded to test directories");
+
+    // Delete everything
+    client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
+    println!("Recursive deletion complete for {}", root_dir);
+
+    // Local cleanup
+    fs::remove_file(file1).ok();
+    fs::remove_file(file2).ok();
+
+    client.disconnect();
+    println!("Disconnected");
 }
