@@ -1,6 +1,19 @@
+// TODO: it is better to rename this file to another name for example file.rs
+// because the crate "ftp" is used and it will create confusion.
+
+use libunftp::{ServerBuilder,Server};
+use libunftp::auth::AnonymousAuthenticator;
+use unftp_sbe_fs::Filesystem;
+use std::net::SocketAddr;
+use std::sync::mpsc;
+use std::thread::{self, JoinHandle};
+use tokio::select;
 use ftp::FtpStream;
 use std::io::Write;
-use std::fs::File;
+use std::fs::{self,File};
+use dotenvy::dotenv;
+use std::env;
+use uuid::Uuid;
 
 // #[derive(Debug, PartialEq)]
 // enum PathType {
@@ -149,7 +162,7 @@ impl FtpClient {
 
     fn delete_recursive(ftp: &mut FtpStream, dir_path: &str) -> Result<(), ftp::FtpError> {
         println!("Processing directory: {dir_path}");
-        
+
         let entries = match ftp.nlst(Some(dir_path)) {
             Ok(entries) => entries,
             Err(e) => {
@@ -157,14 +170,14 @@ impl FtpClient {
                 return Err(e);
             }
         };
-        
+
         println!("Found {} entries in {}", entries.len(), dir_path);
-        
+
         for entry in entries {
             if entry.ends_with("/.") || entry.ends_with("/..") {
                 continue;
             }
-            
+
             let entry_name = if entry.starts_with(dir_path) {
                 entry.strip_prefix(dir_path)
                     .unwrap_or(&entry)
@@ -174,57 +187,44 @@ impl FtpClient {
             } else {
                 &entry
             };
-            
+
             if entry_name.is_empty() || entry_name == "." || entry_name == ".." {
                 continue;
             }
-            
+
             let full_path = format!("{}/{}", dir_path.trim_end_matches('/'), entry_name);
-            
-            match ftp.size(&full_path) {
-                Ok(size) => {
-                    println!("Deleting file: {full_path} (size: {size:?} bytes)");
+
+            match ftp.nlst(Some(&full_path)) {
+                Ok(_) => {
+                    println!("Found subdirectory: {full_path}");
+                    Self::delete_recursive(ftp, &full_path)?;
+                }
+                Err(_) => {
+                    println!("Attempting to delete file: {full_path}");
                     match ftp.rm(&full_path) {
                         Ok(_) => println!("Deleted file: {full_path}"),
                         Err(e) => {
-                            println!("Failed to delete file {full_path}: {e:?}");
+                            println!("Could not delete file {full_path}: {e:?}");
                             return Err(e);
-                        }
-                    }
-                },
-                Err(_) => {
-                    match ftp.nlst(Some(&full_path)) {
-                        Ok(_) => {
-                            println!("Found subdirectory: {full_path}");
-                            Self::delete_recursive(ftp, &full_path)?;
-                        },
-                        Err(_) => {
-                            println!("Attempting to delete as file: {full_path}");
-                            match ftp.rm(&full_path) {
-                                Ok(_) => println!("Deleted file: {full_path}"),
-                                Err(e) => {
-                                    println!("Could not delete {full_path}: {e:?}");
-                                    return Err(e);
-                                }
-                            }
                         }
                     }
                 }
             }
         }
-        
+
         println!("Removing directory: {dir_path}");
         match ftp.rmdir(dir_path) {
             Ok(_) => {
-                println!("Successfully deleted directory: {dir_path}" );
+                println!("Successfully deleted directory: {dir_path}");
                 Ok(())
-            },
+            }
             Err(e) => {
-                println!("Failed to delete directory {dir_path}: {e:?}" );
+                println!("Failed to delete directory {dir_path}: {e:?}");
                 Err(e)
             }
         }
     }
+
 
 
     pub fn remove_file(&mut self, path: &str) -> Result<(), ftp::FtpError> {
@@ -247,159 +247,223 @@ impl Drop for FtpClient {
     }
 }
 
+fn spawn_test_ftp_server_with_shutdown() -> (JoinHandle<()>, String, mpsc::Sender<()>) {
 
-#[cfg(test)]
-mod tests {
-    use std::fs;
-    use dotenvy::dotenv;
-    use std::env;
-    use uuid::Uuid;
-    use super::*;
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap().to_string();
+    drop(listener); 
 
-    #[test]
-    fn test_connection() {
-        dotenv().ok(); 
+    let (shutdown_tx, shutdown_rx) = mpsc::channel();
 
-        let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
-        let ftp_port: u16 = env::var("FTP_PORT")
-            .expect("FTP_PORT not set")
-            .parse()
-            .expect("FTP_PORT must be a valid number");
+    let handle = thread::spawn({
+        let addr_clone = addr.clone();
+        move || {
+            let backend_factory = || Filesystem::new(std::env::temp_dir());
+            let runtime = tokio::runtime::Runtime::new().unwrap();
+            runtime.block_on(async {
+                let server = ServerBuilder::new(Box::new(backend_factory))
+                    .authenticator(std::sync::Arc::new(AnonymousAuthenticator {}))
+                    .build()
+                    .unwrap();
 
-        let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
-        let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
-        let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+                let (async_shutdown_tx, mut async_shutdown_rx) = tokio::sync::mpsc::unbounded_channel();
+                let sync_rx = shutdown_rx;
+                tokio::spawn(async move {
+                    let _ = tokio::task::spawn_blocking(move || sync_rx.recv()).await;
+                    let _ = async_shutdown_tx.send(());
+                });
 
-        let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
-        client.connect().expect("Failed to connect to FTP server");
-        assert!(client.is_connected());
-        client.disconnect();
-        assert!(!client.is_connected());
-    }
-
-    #[test]
-    fn test_file_upload_and_download() {
-        dotenv().ok();
-
-        let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
-        let ftp_port: u16 = env::var("FTP_PORT")
-            .expect("FTP_PORT not set")
-            .parse()
-            .expect("FTP_PORT must be a valid number");
-
-        let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
-        let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
-        let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
-
-        let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
-        client.connect().expect("Failed to connect to FTP server");
-        // Ensure 'upload' directory exists
-        client.make_directory("upload").ok();
-        // Prepare test file
-        let local_path = "test_upload.txt";
-        let mut file = File::create(local_path).unwrap();
-        writeln!(file, "Hello FTP test").unwrap();
-        let remote_path = "upload/test_upload.txt";
-
-        // Upload
-        client.upload_file(local_path, remote_path).expect("Upload failed");
-        // Download
-        let download_path = "downloaded_test_upload.txt";
-        client.download_file(remote_path, download_path).expect("Download failed");
-        // Verify
-        let content = fs::read_to_string(download_path).unwrap();
-        assert!(content.contains("Hello FTP test"));
-        // Cleanup
-        fs::remove_file(local_path).unwrap();
-        fs::remove_file(download_path).unwrap();
-        let _ = client.remove_directory_recursive(remote_path);
-        client.disconnect();
-    }
-
-    #[test]
-    fn test_make_and_change_directory() {
-        dotenv().ok();
-
-        let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
-        let ftp_port: u16 = env::var("FTP_PORT")
-            .expect("FTP_PORT not set")
-            .parse()
-            .expect("FTP_PORT must be a valid number");
-
-        let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
-        let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
-        let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
-
-        let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
-        client.connect().expect("Failed to connect to FTP server");
-
-        let parent = "upload";
-        if let Err(e) = client.make_directory(parent) {
-            println!("Warning: could not create parent dir '{}': {}", parent, e);
+                select! {
+                    result = server.listen(addr_clone) => {
+                        if let Err(e) = result {
+                            eprintln!("Server error: {}", e);
+                        }
+                    }
+                    _ = async_shutdown_rx.recv() => {
+                        println!("Shutdown signal received, stopping server");
+                    }
+                }
+            });
         }
+    });
 
-        let uuid = Uuid::new_v4();
-        let dir = format!("upload/test_dir_{}", uuid);
-        client.make_directory(&dir).expect("Failed to create unique test_dir");
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    (handle, addr, shutdown_tx)
+}
 
-        println!("Directory Made");
+#[test]
+fn test_connection() {
+    
+    let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown();
 
-        client.change_directory(&dir).expect("Failed to change directory");
-        println!("Directory Changed");
+    let addr_parts: Vec<&str> = addr.split(':').collect();
+    let host = addr_parts[0];
+    let port: u16 = addr_parts[1].parse().expect("Invalid port in server address");
 
-        assert!(client.is_connected());
-        client.disconnect();
+    std::thread::sleep(std::time::Duration::from_millis(300));
+
+    let test_credentials = vec![
+        ("anonymous", "", "/"),
+        ("test", "test", "/"),
+        ("ftp", "", "/"),
+    ];
+
+    let mut connection_successful = false;
+    for (user, pass, dir) in test_credentials {
+        let mut client = FtpClient::new(host, port, user, pass, dir);
+        
+        match client.connect() {
+            Ok(_) => {
+                println!("Connected to FTP server at {} with credentials {}/{}", addr, user, pass);
+                assert!(client.is_connected());
+
+                client.disconnect();
+                assert!(!client.is_connected());
+
+                connection_successful = true;
+                break;
+            }
+            Err(e) => {
+                println!("Failed to connect with {}/{}: {}", user, pass, e);
+            }
+        }
     }
 
-    #[test]
-    fn test_recursive_delete_directory() {
-        dotenv().ok();
-        println!("Loaded .env configuration");
+    shutdown_tx.send(()).expect("Failed to send shutdown signal");
+    handle.join().expect("Server thread panicked");
 
-        let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
-        let ftp_port: u16 = env::var("FTP_PORT")
-            .expect("FTP_PORT not set")
-            .parse()
-            .expect("FTP_PORT must be a valid number");
-        let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
-        let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
-        let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+    assert!(connection_successful, "Failed to connect to the test FTP server with any credentials");
+}
 
-        let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
-        client.connect().expect("Failed to connect to FTP server");
+#[test]
+fn test_file_upload_and_download() {
 
-        // Generate unique test directories
-        let uuid = Uuid::new_v4();
-        let root_dir = format!("upload/test_del_{}", uuid);
-        let sub_dir = format!("{}/nested", root_dir);
+    let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown();
 
-        // Create directory structure on FTP
-        client.make_directory("upload").ok(); // ignore error if exists
-        client.make_directory(&root_dir).expect("Could not create root dir");
-        client.make_directory(&sub_dir).expect("Could not create nested dir");
+    let addr_parts: Vec<&str> = addr.split(':').collect();
+    let host = addr_parts[0];
+    let port: u16 = addr_parts[1].parse().expect("Invalid port in server address");
 
-        // Create and upload two files (one in each dir)
-        let file1 = "temp_root.txt";
-        let file2 = "temp_nested.txt";
-        fs::write(file1, "Root level file").unwrap();
-        fs::write(file2, "Nested file").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(300)); 
 
-        let remote1: String = format!("{}/file1.txt", root_dir);
-        let remote2 = format!("{}/file2.txt", sub_dir);
-        client.upload_file(file1, &remote1).expect("Upload file1 failed");
-        client.upload_file(file2, &remote2).expect("Upload file2 failed");
+    let user = "anonymous";
+    let pass = "";
+    let user_dir = "/";
 
-        println!("Files uploaded to test directories");
+    let mut client = FtpClient::new(host, port, user, pass, user_dir);
+    client.connect().expect("Failed to connect to test FTP server");
 
-        // Delete everything
-        client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
-        println!("Recursive deletion complete for {}", root_dir);
+    client.make_directory("upload").ok();
 
-        // Local cleanup
-        fs::remove_file(file1).ok();
-        fs::remove_file(file2).ok();
+    let local_path = "test_upload.txt";
+    let mut file = File::create(local_path).unwrap();
+    writeln!(file, "Hello FTP test").unwrap();
 
-        client.disconnect();
-        println!("Disconnected");
+    let remote_path = "upload/test_upload.txt";
+    client.upload_file(local_path, remote_path).expect("Upload failed");
+
+    let download_path = "downloaded_test_upload.txt";
+    client.download_file(remote_path, download_path).expect("Download failed");
+
+    let content = fs::read_to_string(download_path).unwrap();
+    assert!(content.contains("Hello FTP test"));
+
+    fs::remove_file(local_path).unwrap();
+    fs::remove_file(download_path).unwrap();
+    client.remove_directory_recursive("upload").ok();
+    client.disconnect();
+
+    shutdown_tx.send(()).expect("Failed to send shutdown signal");
+    handle.join().expect("Server thread panicked");
+}
+
+#[test]
+fn test_make_and_change_directory() {
+
+    let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown();
+
+    let addr_parts: Vec<&str> = addr.split(':').collect();
+    let host = addr_parts[0];
+    let port: u16 = addr_parts[1].parse().expect("Invalid port in server address");
+
+    std::thread::sleep(std::time::Duration::from_millis(300)); 
+
+    let user = "anonymous";
+    let pass = "";
+    let user_dir = "/";
+
+    let mut client = FtpClient::new(host, port, user, pass, user_dir);
+    client.connect().expect("Failed to connect to test FTP server");
+
+    let parent = "upload";
+    if let Err(e) = client.make_directory(parent) {
+        println!("Warning: could not create parent dir '{}': {}", parent, e);
     }
+
+    let uuid = Uuid::new_v4();
+    let dir = format!("upload/test_dir_{}", uuid);
+    client.make_directory(&dir).expect("Failed to create unique test_dir");
+
+    println!("Directory Made: {dir}");
+
+    client.change_directory(&dir).expect("Failed to change directory");
+    println!("Directory Changed to: {dir}");
+
+    assert!(client.is_connected());
+    client.disconnect();
+
+    shutdown_tx.send(()).expect("Failed to send shutdown signal");
+    handle.join().expect("Server thread panicked");
+}
+
+#[test]
+fn test_recursive_delete_directory() {
+    println!("Loaded .env configuration");
+
+    let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown();
+
+    let addr_parts: Vec<&str> = addr.split(':').collect();
+    let host = addr_parts[0];
+    let port: u16 = addr_parts[1].parse().expect("Invalid port in server address");
+
+    std::thread::sleep(std::time::Duration::from_millis(300)); 
+
+    let user = "anonymous";
+    let pass = "";
+    let user_dir = "/";
+
+    let mut client = FtpClient::new(host, port, user, pass, user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+
+    let uuid = Uuid::new_v4();
+    let root_dir = format!("upload/test_del_{}", uuid);
+    let sub_dir = format!("{}/nested", root_dir);
+
+    client.make_directory("upload").ok(); 
+    client.make_directory(&root_dir).expect("Could not create root dir");
+    client.make_directory(&sub_dir).expect("Could not create nested dir");
+
+    let file1 = "temp_root.txt";
+    let file2 = "temp_nested.txt";
+    fs::write(file1, "Root level file").unwrap();
+    fs::write(file2, "Nested file").unwrap();
+
+    let remote1: String = format!("{}/file1.txt", root_dir);
+    let remote2 = format!("{}/file2.txt", sub_dir);
+    client.upload_file(file1, &remote1).expect("Upload file1 failed");
+    client.upload_file(file2, &remote2).expect("Upload file2 failed");
+
+    println!("Files uploaded to test directories");
+
+    client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
+    println!("Recursive deletion complete for {}", root_dir);
+
+    fs::remove_file(file1).ok();
+    fs::remove_file(file2).ok();
+
+    client.disconnect();
+    println!("Disconnected");
+
+    shutdown_tx.send(()).expect("Failed to send shutdown signal");
+    handle.join().expect("Server thread panicked");
 }
