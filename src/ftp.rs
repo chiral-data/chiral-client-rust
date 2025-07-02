@@ -171,6 +171,18 @@ impl FtpClient {
 
         Ok(())
     }
+    
+    pub fn remove_file(&mut self, path: &str) -> Result<(), ftp::FtpError> {
+    let ftp_stream = self.ftp.as_mut().ok_or_else(|| {
+        ftp::FtpError::ConnectionError(std::io::Error::new(
+            std::io::ErrorKind::NotConnected,
+            "Not connected to FTP server",
+        ))
+    })?;
+
+    ftp_stream.rm(path)
+}
+
 
 }
 
