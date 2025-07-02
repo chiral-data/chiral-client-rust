@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use dotenvy::dotenv;
 use std::env;
-
+use uuid::Uuid;
 
 #[test]
 fn test_connection() {
@@ -64,4 +64,40 @@ fn test_file_upload_and_download() {
     let _ = client.remove_directory_recursive(remote_path);
     client.disconnect();
 }
+
+#[test]
+fn test_make_and_change_directory() {
+    dotenv().ok();
+
+    let ftp_addr = env::var("FTP_HOST").expect("FTP_HOST not set");
+    let ftp_port: u16 = env::var("FTP_PORT")
+        .expect("FTP_PORT not set")
+        .parse()
+        .expect("FTP_PORT must be a valid number");
+
+    let ftp_user = env::var("FTP_USER").expect("FTP_USER not set");
+    let ftp_pass = env::var("FTP_PASS").expect("FTP_PASS not set");
+    let ftp_user_dir = env::var("FTP_USER_DIR").expect("FTP_USER_DIR not set");
+
+    let mut client = FtpClient::new(&ftp_addr, ftp_port, &ftp_user, &ftp_pass, &ftp_user_dir);
+    client.connect().expect("Failed to connect to FTP server");
+
+    let parent = "upload";
+    if let Err(e) = client.make_directory(parent) {
+        println!("Warning: could not create parent dir '{}': {}", parent, e);
+    }
+
+    let uuid = Uuid::new_v4();
+    let dir = format!("upload/test_dir_{}", uuid);
+    client.make_directory(&dir).expect("Failed to create unique test_dir");
+
+    println!("Directory Made");
+
+    client.change_directory(&dir).expect("Failed to change directory");
+    println!("Directory Changed");
+
+    assert!(client.is_connected());
+    client.disconnect();
+}
+
 
