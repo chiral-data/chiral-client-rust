@@ -1,3 +1,6 @@
+// TODO: it is better to rename this file to another name for example file.rs
+// because the crate "ftp" is used and it will create confusion.
+
 use ftp::FtpStream;
 use std::fs::File;
 use std::io::Write;

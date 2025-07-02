@@ -1,3 +1,6 @@
+// TODO: move the tests into ftp.rs
+// since they are unit tests
+
 use chiral_client::ftp::FtpClient;
 use std::fs::{self, File};
 use std::io::Write;
