@@ -360,6 +360,7 @@ dependencies = [
  "dotenvy",
  "ftp",
  "libunftp",
+ "once_cell",
  "prost",
  "prost-build",
  "rand",
