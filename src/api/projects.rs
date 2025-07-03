@@ -4,13 +4,10 @@ use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
-#[allow(dead_code)]
+
 pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjects";
-    let serialized = format!(
-        "{{\"{}\": null}}",
-        end_point
-    );
+    let serialized = format!("{{\"{end_point}\": null}}");
 
 
     let req_msg = RequestUserCommunicate{
@@ -38,13 +35,10 @@ pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, t
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
+
 pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfExampleProjects";
-    let serialized = format!(
-        "{{\"{}\": null}}",
-        end_point
-    );
+    let serialized = format!("{{\"{end_point}\": null}}");
 
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
@@ -71,13 +65,10 @@ pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email:
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
+
 pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjectFiles";
-    let serialized = format!(
-    "{{\"{}\": \"{}\"}}",
-    end_point, project_name
-    );
+    let serialized = format!("{{\"{end_point}\": \"{project_name}\"}}");
 
 
     let req_msg = RequestUserCommunicate{
@@ -105,13 +96,10 @@ pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &s
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
+
 pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ImportExampleProject";
-    let serialized = format!(
-    "{{\"{}\": \"{}\"}}",
-    end_point, project_name
-    );
+    let serialized = format!("{{\"{end_point}\": \"{project_name}\"}}");
 
 
     let req_msg = RequestUserCommunicate{
@@ -139,20 +127,17 @@ pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &
     Err("Unexpected empty response from server".into())
 }
 
-#[allow(dead_code)]
+
 pub async fn get_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str, file_name: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let _end_point = "GetJobs";
     let end_point = "GetProjectFile";
-    let serialized = format!(
-        "{{\"{}\": [\"{}\", \"{}\"]}}",
-        end_point, project_name, file_name
-    );
+    let serialized = format!("{{\"{end_point}\": [\"{project_name}\", \"{file_name}\"]}}");
 
 
     let req_msg = RequestUserCommunicate {
         serialized_request: serialized.clone(),
     };
 
-    println!("Sending payload: {}", serialized); 
+    println!("Sending payload: {serialized}" ); 
 
     let mut request = Request::new(req_msg);
     request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
