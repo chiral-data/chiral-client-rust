@@ -169,6 +169,8 @@ mod tests{
     use super::*;
     use crate::api::create_client;
     use dotenvy;
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
 
     #[tokio::test]
     async fn test_list_of_projects() {
@@ -319,62 +321,85 @@ mod tests{
     
     #[tokio::test]
     async fn test_get_project_files() {
+        // Load environment variables
         dotenvy::from_filename(".env").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL is not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL is not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH is not set");
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing CHIRAL_STAGING_API_URL");
+        let email = std::env::var("TEST_EMAIL").expect("Missing TEST_EMAIL");
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing TEST_TOKEN_AUTH");
 
+        // Create API client
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
+        // Fetch list of projects
         let projects = list_of_projects(&mut client, &email, &token_auth)
             .await
-            .expect("Failed to get list of projects");
+            .expect("Failed to fetch list of projects");
 
+        // Extract a project name
         let project_name = projects
-            .as_array()
-            .and_then(|arr| {
-                arr.iter().find_map(|p| match p {
-                    serde_json::Value::String(name) => Some(name.clone()),
+        .as_array()
+        .and_then(|arr| {
+            let mut rng = thread_rng();
+            let valid_names: Vec<String> = arr
+                .iter()
+                .filter_map(|p| match p {
                     serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
+                    serde_json::Value::String(name) => Some(name.clone()),
                     _ => None,
                 })
-            }).expect("No valid project name found in project list");
+                .collect();
+
+            valid_names.choose(&mut rng).cloned()
+        })
+        .expect("No valid project name found in project list");
 
         println!("Using project: {}", project_name);
 
+        // Fetch project files
         let files = list_of_project_files(&mut client, &email, &token_auth, &project_name)
             .await
             .expect("Failed to list project files");
 
         let file_array = files.as_array().expect("File list is not an array");
 
-        let mut success = false;
+        println!("Found {} file(s) in project.", file_array.len());
+        let mut at_least_one_success = false;
+
         for file in file_array {
             let file_name = match file {
-                serde_json::Value::String(name) => name.clone(),
-                serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from).unwrap_or_default(),
-                _ => continue,
+                serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
+                serde_json::Value::String(name) => Some(name.clone()),
+                _ => None,
+            };
+
+            let Some(file_name) = file_name else {
+                println!("Skipping invalid file entry: {file:?}");
+                continue;
             };
 
             println!("Trying file: {}", file_name);
 
             match get_project_files(&mut client, &email, &token_auth, &project_name, &file_name).await {
                 Ok(file_data) => {
-                    println!("Successfully fetched file: {}\nData: {}", file_name, file_data);
+                    println!("✅ Successfully fetched file: {}\nData: {}", file_name, file_data);
                     assert!(
                         file_data.is_string() || file_data.is_object(),
-                        "Expected JSON string or object, got: {}",
+                        "Expected JSON string or object for file '{}', got: {}",
+                        file_name,
                         file_data
                     );
-                    success = true;
-                    break;
-                },
+                    at_least_one_success = true;
+                }
                 Err(e) => {
-                    println!("Skipping file due to error: {}", e);
+                    println!("❌ Error fetching '{}': {}", file_name, e);
                 }
             }
         }
 
-        assert!(success, "No project file could be successfully fetched and validated.");
+        assert!(
+            at_least_one_success,
+            "No project file could be successfully fetched and validated."
+        );
     }
+
 }

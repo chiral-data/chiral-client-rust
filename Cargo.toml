@@ -32,3 +32,4 @@ prost-build = "0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 libunftp = "0.20"
 unftp-sbe-fs = "0.2"
+rand = "0.8"
