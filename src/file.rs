@@ -170,7 +170,7 @@ impl FtpClient {
                     .unwrap_or(&entry)
                     .trim_start_matches('/')
             } else if entry.contains('/') {
-                entry.split('/').last().unwrap_or(&entry)
+                entry.split('/').next_back().unwrap_or(&entry)
             } else {
                 &entry
             };
@@ -246,11 +246,10 @@ mod tests {
     use uuid::Uuid;
 
     use unftp_sbe_fs::Filesystem;
-    use libunftp::{ServerBuilder};
+    use libunftp::ServerBuilder;
     use libunftp::auth::AnonymousAuthenticator;
     
     fn spawn_test_ftp_server_with_shutdown() -> (JoinHandle<()>, String, mpsc::Sender<()>) {
-    
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap().to_string();
         drop(listener); 
@@ -268,34 +267,33 @@ mod tests {
                     .build()
                     .unwrap();
                 
-                let (async_shutdown_tx, mut async_shutdown_rx) = tokio::sync::mpsc::unbounded_channel();
-                let sync_rx = shutdown_rx;
-                tokio::spawn(async move {
-                    let _ = tokio::task::spawn_blocking(move || sync_rx.recv()).await;
-                    let _ = async_shutdown_tx.send(());
-                });
-                
-                select! {
-                    result = server.listen(addr_clone) => {
-                        if let Err(e) = result {
-                            eprintln!("Server error: {}", e);
+                    let (async_shutdown_tx, mut async_shutdown_rx) = tokio::sync::mpsc::unbounded_channel();
+                    let sync_rx = shutdown_rx;
+                    tokio::spawn(async move {
+                        let _ = tokio::task::spawn_blocking(move || sync_rx.recv()).await;
+                        let _ = async_shutdown_tx.send(());
+                    });
+                    
+                    select! {
+                        result = server.listen(addr_clone) => {
+                            if let Err(e) = result {
+                                eprintln!("Server error: {}", e);
+                            }
+                        }
+                        _ = async_shutdown_rx.recv() => {
+                            println!("Shutdown signal received, stopping server");
                         }
                     }
-                    _ = async_shutdown_rx.recv() => {
-                        println!("Shutdown signal received, stopping server");
-                    }
-                }
-            });
-        }
-    });
+                });
+            }
+        });
     
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    (handle, addr, shutdown_tx)
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        (handle, addr, shutdown_tx)
     }
 
     #[test]
     fn test_connection() {
-        
         let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown();
         
         let addr_parts: Vec<&str> = addr.split(':').collect();
