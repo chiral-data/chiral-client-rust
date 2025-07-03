@@ -16,4 +16,4 @@ pub use api::{
     refresh_token_api,
 };
 
-pub mod ftp;
+pub mod file;
