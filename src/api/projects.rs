@@ -321,41 +321,38 @@ mod tests{
     
     #[tokio::test]
     async fn test_get_project_files() {
-        // Load environment variables
         dotenvy::from_filename(".env").ok();
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing CHIRAL_STAGING_API_URL");
         let email = std::env::var("TEST_EMAIL").expect("Missing TEST_EMAIL");
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing TEST_TOKEN_AUTH");
 
-        // Create API client
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
-        // Fetch list of projects
         let projects = list_of_projects(&mut client, &email, &token_auth)
             .await
             .expect("Failed to fetch list of projects");
 
-        // Extract a project name
         let project_name = projects
-        .as_array()
-        .and_then(|arr| {
-            let mut rng = thread_rng();
-            let valid_names: Vec<String> = arr
-                .iter()
-                .filter_map(|p| match p {
-                    serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
-                    serde_json::Value::String(name) => Some(name.clone()),
-                    _ => None,
-                })
-                .collect();
+            .as_array()
+            .and_then(|arr| {
+                let mut rng = thread_rng();
+                let valid_names: Vec<String> = arr
+                    .iter()
+                    .filter_map(|p| match p {
+                        serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
+                        serde_json::Value::String(name) => Some(name.clone()),
+                        _ => None,
+                    })
+                    .filter(|name| !name.starts_with("gromacs_bench"))
+                    .collect();
 
-            valid_names.choose(&mut rng).cloned()
-        })
-        .expect("No valid project name found in project list");
+                valid_names.choose(&mut rng).cloned()
+            })
+            .expect("No valid project name found (after filtering broken gromacs_bench projects)");
 
-        println!("Using project: {}", project_name);
 
-        // Fetch project files
+        println!("Using project: {project_name}");
+
         let files = list_of_project_files(&mut client, &email, &token_auth, &project_name)
             .await
             .expect("Failed to list project files");
@@ -381,7 +378,7 @@ mod tests{
 
             match get_project_files(&mut client, &email, &token_auth, &project_name, &file_name).await {
                 Ok(file_data) => {
-                    println!("✅ Successfully fetched file: {}\nData: {}", file_name, file_data);
+                    println!("Successfully fetched file: {}\nData: {}", file_name, file_data);
                     assert!(
                         file_data.is_string() || file_data.is_object(),
                         "Expected JSON string or object for file '{}', got: {}",
@@ -391,7 +388,7 @@ mod tests{
                     at_least_one_success = true;
                 }
                 Err(e) => {
-                    println!("❌ Error fetching '{}': {}", file_name, e);
+                    println!("Error fetching '{}': {}", file_name, e);
                 }
             }
         }
