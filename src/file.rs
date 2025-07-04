@@ -158,8 +158,6 @@ impl FtpClient {
             }
         };
 
-        println!("Found {} entries in {}", entries.len(), dir_path);
-
         for entry in entries {
             if entry.ends_with("/.") || entry.ends_with("/..") {
                 continue;
@@ -181,36 +179,34 @@ impl FtpClient {
 
             let full_path = format!("{}/{}", dir_path.trim_end_matches('/'), entry_name);
 
-            match ftp.nlst(Some(&full_path)) {
+            // Distinguish directory vs file by trying cwd
+            match ftp.cwd(&full_path) {
                 Ok(_) => {
+                    ftp.cwd("/")?; // Reset to root or previous working dir
                     println!("Found subdirectory: {full_path}");
                     Self::delete_recursive(ftp, &full_path)?;
                 }
                 Err(_) => {
                     println!("Attempting to delete file: {full_path}");
-                    match ftp.rm(&full_path) {
-                        Ok(_) => println!("Deleted file: {full_path}"),
-                        Err(e) => {
-                            println!("Could not delete file {full_path}: {e:?}");
-                            return Err(e);
-                        }
-                    }
+                    ftp.rm(&full_path).map(|_| {
+                        println!("Deleted file: {full_path}");
+                    }).map_err(|e| {
+                        println!("Could not delete file {full_path}: {e:?}");
+                        e
+                    })?;
                 }
             }
         }
 
         println!("Removing directory: {dir_path}");
-        match ftp.rmdir(dir_path) {
-            Ok(_) => {
-                println!("Successfully deleted directory: {dir_path}");
-                Ok(())
-            }
-            Err(e) => {
-                println!("Failed to delete directory {dir_path}: {e:?}");
-                Err(e)
-            }
-        }
+        ftp.rmdir(dir_path).map(|_| {
+            println!("Successfully deleted directory: {dir_path}");
+        }).map_err(|e| {
+            println!("Failed to delete directory {dir_path}: {e:?}");
+            e
+        })
     }
+
 
 
 
@@ -435,7 +431,7 @@ mod tests {
         handle.join().expect("Server thread panicked");
     }
 
-    #[test]
+   #[test]
     fn test_recursive_delete_directory() {
         println!("Loaded .env configuration");
 
@@ -448,31 +444,40 @@ mod tests {
         let mut client = FtpClient::new(host, port, "anonymous", "", "/");
         client.connect().expect("Failed to connect to FTP server");
 
+        // Generate unique root and nested directories
         let uuid = Uuid::new_v4();
         let root_dir = format!("upload/test_del_{}", uuid);
         let sub_dir = format!("{}/nested", root_dir);
 
+        // Create directories
         client.make_directory("upload").ok();
         client.make_directory(&root_dir).expect("Could not create root dir");
         client.make_directory(&sub_dir).expect("Could not create nested dir");
 
-        let file1 = "temp_root.txt";
-        let file2 = "temp_nested.txt";
-        fs::write(file1, "Root level file").unwrap();
-        fs::write(file2, "Nested file").unwrap();
+        // Prepare temporary files in OS temp directory
+        let temp_dir = std::env::temp_dir();
 
+        let file1_path = temp_dir.join(format!("ftp_temp_root_{}.txt", uuid));
+        let file2_path = temp_dir.join(format!("ftp_temp_nested_{}.txt", uuid));
+
+        std::fs::write(&file1_path, "Root level file\n").expect("Failed to write temp file1");
+        std::fs::write(&file2_path, "Nested file\n").expect("Failed to write temp file2");
+
+        // Upload files to FTP server
         let remote1 = format!("{}/file1.txt", root_dir);
         let remote2 = format!("{}/file2.txt", sub_dir);
-        client.upload_file(file1, &remote1).expect("Upload file1 failed");
-        client.upload_file(file2, &remote2).expect("Upload file2 failed");
+        client.upload_file(file1_path.to_str().unwrap(), &remote1).expect("Upload file1 failed");
+        client.upload_file(file2_path.to_str().unwrap(), &remote2).expect("Upload file2 failed");
 
         println!("Files uploaded to test directories");
 
+        // Perform recursive deletion
         client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
         println!("Recursive deletion complete for {}", root_dir);
 
-        fs::remove_file(file1).ok();
-        fs::remove_file(file2).ok();
+        // Cleanup local temp files
+        let _ = std::fs::remove_file(&file1_path);
+        let _ = std::fs::remove_file(&file2_path);
 
         client.disconnect();
         println!("Disconnected");
@@ -480,4 +485,5 @@ mod tests {
         shutdown_tx.send(()).expect("Failed to send shutdown");
         handle.join().expect("Server thread panicked");
     }
+
 }
