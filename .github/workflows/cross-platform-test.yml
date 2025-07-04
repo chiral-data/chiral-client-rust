@@ -2,9 +2,9 @@ name: Rust Cross-Platform Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main,7-move-the-unit-tests]
   pull_request:
-    branches: [main]
+    branches: [main,7-move-the-unit-tests]
 
 jobs:
   test:
