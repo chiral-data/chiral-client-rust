@@ -43,4 +43,8 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Run tests
-        run: cargo test --all
+        run: |
+          for i in {1..5}; do
+            echo "Run #$i "
+            cargo test --all || exit 1
+          done
