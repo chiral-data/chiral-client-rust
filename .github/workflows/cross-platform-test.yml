@@ -2,9 +2,9 @@ name: Rust Cross-Platform Tests
 
 on:
   push:
-    branches: [main,7-move-the-unit-tests]
+    branches: [main, 7-move-the-unit-tests]
   pull_request:
-    branches: [main,7-move-the-unit-tests]
+    branches: [main, 7-move-the-unit-tests]
 
 jobs:
   test:
@@ -32,7 +32,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
+      - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -42,9 +42,21 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Run tests
+      - name: Run tests repeatedly (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           for i in {1..5}; do
-            echo "Run #$i "
+            echo "Run #$i ----------------------------"
             cargo test --all || exit 1
           done
+
+      - name: Run tests repeatedly (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $failed = 0
+          For ($i = 1; $i -le 5; $i++) {
+            Write-Host "🧪 Run #$i ----------------------------"
+            cargo test --all
+          }
