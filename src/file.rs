@@ -37,7 +37,7 @@ impl FtpClient {
         let mut ftp_stream = FtpStream::connect(address)?;
         ftp_stream.login(&self.user_email, &self.token_api)?;
 
-        // Try to change into the user's subdirectory; if it doesn't exist, create it
+        // Try switching to user directory
         match ftp_stream.cwd(&self.user_id) {
             Ok(_) => {
                 println!("Directory '{}' exists. Switched into it.", self.user_id);
@@ -45,11 +45,27 @@ impl FtpClient {
             Err(_) => {
                 println!("Directory '{}' does not exist. Creating...", self.user_id);
                 ftp_stream.mkdir(&self.user_id)?;
-                ftp_stream.cwd(&self.user_id)?;
-                println!("Directory '{}' created and switched into.", self.user_id);
+                
+                // Retry entering the directory after creating it
+                let mut retry_count = 0;
+                loop {
+                    match ftp_stream.cwd(&self.user_id) {
+                        Ok(_) => {
+                            println!("Successfully switched to newly created directory '{}'", self.user_id);
+                            break;
+                        }
+                        Err(_e) if retry_count < 5 => {
+                            retry_count += 1;
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+                            continue;
+                        }
+                        Err(e) => return Err(e),
+                    }
+                }
             }
         }
 
+        // Confirm current working directory
         let current_dir = ftp_stream.pwd()?;
         println!("Connected and changed to directory: {current_dir}");
 
@@ -57,6 +73,7 @@ impl FtpClient {
         self.ftp = Some(ftp_stream);
         Ok(())
     }
+
 
 
 
