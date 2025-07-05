@@ -299,9 +299,9 @@ mod tests {
             }
         });
 
-        let _ = ready_rx.recv().expect("Server failed to start");
+        ready_rx.recv().expect("Server failed to start");
 
-        wait_for_server_ready(&addr);
+        // wait_for_server_ready(&addr);
 
         (handle, addr, shutdown_tx)
     }
@@ -433,9 +433,8 @@ mod tests {
 
    #[test]
     fn test_recursive_delete_directory() {
-        println!("Loaded .env configuration");
-
         let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+        wait_for_server_ready(&addr);
 
         let addr_parts: Vec<&str> = addr.split(':').collect();
         let host = addr_parts[0];
