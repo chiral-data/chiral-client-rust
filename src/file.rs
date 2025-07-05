@@ -37,27 +37,45 @@ impl FtpClient {
         let mut ftp_stream = FtpStream::connect(address)?;
         ftp_stream.login(&self.user_email, &self.token_api)?;
 
-        // Try to change into the user's subdirectory; if it doesn't exist, create it
+        // Try to change into the user's subdirectory
         match ftp_stream.cwd(&self.user_id) {
             Ok(_) => {
                 println!("Directory '{}' exists. Switched into it.", self.user_id);
             }
-            Err(_) => {
-                println!("Directory '{}' does not exist. Creating...", self.user_id);
-                ftp_stream.mkdir(&self.user_id)?;
-                ftp_stream.cwd(&self.user_id)?;
-                println!("Directory '{}' created and switched into.", self.user_id);
+            Err(cwd_error) => {
+                println!("Directory '{}' does not exist. Attempting to create...", self.user_id);
+                
+                // Try to create the directory
+                match ftp_stream.mkdir(&self.user_id) {
+                    Ok(_) => {
+                        println!("Directory '{}' created successfully.", self.user_id);
+                        // Now try to change into it
+                        match ftp_stream.cwd(&self.user_id) {
+                            Ok(_) => {
+                                println!("Successfully switched into directory '{}'.", self.user_id);
+                            }
+                            Err(cwd_error2) => {
+                                println!("Warning: Created directory '{}' but couldn't switch into it: {:?}", self.user_id, cwd_error2);
+                                println!("Continuing without switching to user directory.");
+                            }
+                        }
+                    }
+                    Err(mkdir_error) => {
+                        println!("Warning: Could not create directory '{}': {:?}", self.user_id, mkdir_error);
+                        println!("Original cwd error: {:?}", cwd_error);
+                        println!("Continuing without user directory - working from root.");
+                    }
+                }
             }
         }
 
         let current_dir = ftp_stream.pwd()?;
-        println!("Connected and changed to directory: {current_dir}");
+        println!("Connected and current directory: {current_dir}");
 
         self.root_dir = Some(current_dir);
         self.ftp = Some(ftp_stream);
         Ok(())
     }
-
 
 
     pub fn disconnect(&mut self) {
