@@ -17,6 +17,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up .env.staging (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cp .env.staging .env
+        shell: bash
+
+      - name: Set up .env.staging (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Copy-Item .env.staging .env
+        shell: pwsh
+
       - name: Install protoc (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
@@ -55,7 +67,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $failed = 0
           For ($i = 1; $i -le 5; $i++) {
             Write-Host "🧪 Run #$i ----------------------------"
             cargo test --all

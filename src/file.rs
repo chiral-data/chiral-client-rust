@@ -36,11 +36,20 @@ impl FtpClient {
         let address = format!("{}:{}", self.ftp_addr, self.ftp_port);
         let mut ftp_stream = FtpStream::connect(address)?;
         ftp_stream.login(&self.user_email, &self.token_api)?;
-        
-        // Try to change into the user's subdirectory
-        ftp_stream.cwd(&self.user_id)?;
-        
-        // Confirm we're in the correct directory
+
+        // Try to change into the user's subdirectory; if it doesn't exist, create it
+        match ftp_stream.cwd(&self.user_id) {
+            Ok(_) => {
+                println!("Directory '{}' exists. Switched into it.", self.user_id);
+            }
+            Err(_) => {
+                println!("Directory '{}' does not exist. Creating...", self.user_id);
+                ftp_stream.mkdir(&self.user_id)?;
+                ftp_stream.cwd(&self.user_id)?;
+                println!("Directory '{}' created and switched into.", self.user_id);
+            }
+        }
+
         let current_dir = ftp_stream.pwd()?;
         println!("Connected and changed to directory: {current_dir}");
 
@@ -48,6 +57,7 @@ impl FtpClient {
         self.ftp = Some(ftp_stream);
         Ok(())
     }
+
 
 
     pub fn disconnect(&mut self) {
@@ -150,6 +160,9 @@ impl FtpClient {
     fn delete_recursive(ftp: &mut FtpStream, dir_path: &str) -> Result<(), ftp::FtpError> {
         println!("Processing directory: {dir_path}");
 
+        // Store current working directory to restore later
+        let current_dir = ftp.pwd()?;
+        
         let entries = match ftp.nlst(Some(dir_path)) {
             Ok(entries) => entries,
             Err(e) => {
@@ -182,7 +195,8 @@ impl FtpClient {
             // Distinguish directory vs file by trying cwd
             match ftp.cwd(&full_path) {
                 Ok(_) => {
-                    ftp.cwd("/")?; // Reset to root or previous working dir
+                    // Restore working directory before recursive call
+                    ftp.cwd(&current_dir)?;
                     println!("Found subdirectory: {full_path}");
                     Self::delete_recursive(ftp, &full_path)?;
                 }
@@ -208,18 +222,16 @@ impl FtpClient {
     }
 
 
-
-
     pub fn remove_file(&mut self, path: &str) -> Result<(), ftp::FtpError> {
-    let ftp_stream = self.ftp.as_mut().ok_or_else(|| {
-        ftp::FtpError::ConnectionError(std::io::Error::new(
-            std::io::ErrorKind::NotConnected,
-            "Not connected to FTP server",
-        ))
-    })?;
+        let ftp_stream = self.ftp.as_mut().ok_or_else(|| {
+            ftp::FtpError::ConnectionError(std::io::Error::new(
+                std::io::ErrorKind::NotConnected,
+                "Not connected to FTP server",
+            ))
+        })?;
 
-    ftp_stream.rm(path)
-}
+        ftp_stream.rm(path)
+    }
 
 
 }
@@ -315,7 +327,7 @@ mod tests {
         let timeout = Duration::from_secs(10);
 
         while start_time.elapsed() < timeout {
-            let mut test_client = FtpClient::new(host, port, "anonymous", "", "/");
+            let mut test_client = FtpClient::new(host, port, "anonymous", "", "test_user");
             if test_client.connect().is_ok() {
                 test_client.disconnect();
                 println!("Server is ready to accept connections at {}", addr);
@@ -336,18 +348,21 @@ mod tests {
         let port: u16 = addr_parts[1].parse().expect("Invalid port");
 
         let test_credentials = vec![
-            ("anonymous", "", "/"),
-            ("test", "test", "/"),
-            ("ftp", "", "/"),
-        ];
+            ("anonymous", "", "test_user"),
+            ("test", "test", "test_user"),
+            ("ftp", "", "test_user"),
+        ];  
 
         let mut connection_successful = false;
-        for (user, pass, dir) in test_credentials {
-            let mut client = FtpClient::new(host, port, user, pass, dir);
+        for (user, pass, initial_dir) in test_credentials {
+            let mut client = FtpClient::new(host, port, user, pass, initial_dir);
 
             match client.connect() {
                 Ok(_) => {
-                    println!("Connected to FTP server at {} with credentials {}/{}", addr, user, pass);
+                    println!(
+                        "Connected to FTP server at {} with credentials {}/{} and initial directory {}",
+                        addr, user, pass, initial_dir
+                    );
                     assert!(client.is_connected());
 
                     client.disconnect();
@@ -376,7 +391,7 @@ mod tests {
         let host = addr_parts[0];
         let port: u16 = addr_parts[1].parse().expect("Invalid port");
 
-        let mut client = FtpClient::new(host, port, "anonymous", "", "/");
+        let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
         client.connect().expect("Failed to connect");
 
         client.make_directory("upload").ok();
@@ -411,7 +426,7 @@ mod tests {
         let host = addr_parts[0];
         let port: u16 = addr_parts[1].parse().expect("Invalid port");
 
-        let mut client = FtpClient::new(host, port, "anonymous", "", "/");
+        let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
         client.connect().expect("Failed to connect");
 
         let parent = "upload";
@@ -431,7 +446,7 @@ mod tests {
         handle.join().expect("Server thread panicked");
     }
 
-   #[test]
+    #[test]
     fn test_recursive_delete_directory() {
         let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
         wait_for_server_ready(&addr);
@@ -440,22 +455,21 @@ mod tests {
         let host = addr_parts[0];
         let port: u16 = addr_parts[1].parse().expect("Invalid port");
 
-        let mut client = FtpClient::new(host, port, "anonymous", "", "/");
+        let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
         client.connect().expect("Failed to connect to FTP server");
 
         // Generate unique root and nested directories
         let uuid = Uuid::new_v4();
-        let root_dir = format!("upload/test_del_{}", uuid);
+        let root_dir = format!("upload1/test_del_{}", uuid);
         let sub_dir = format!("{}/nested", root_dir);
 
         // Create directories
-        client.make_directory("upload").ok();
+        client.make_directory("upload1").ok();
         client.make_directory(&root_dir).expect("Could not create root dir");
         client.make_directory(&sub_dir).expect("Could not create nested dir");
 
-        // Prepare temporary files in OS temp directory
+        // Create local temp files
         let temp_dir = std::env::temp_dir();
-
         let file1_path = temp_dir.join(format!("ftp_temp_root_{}.txt", uuid));
         let file2_path = temp_dir.join(format!("ftp_temp_nested_{}.txt", uuid));
 
@@ -470,11 +484,11 @@ mod tests {
 
         println!("Files uploaded to test directories");
 
-        // Perform recursive deletion
+        // ✅ Recursive deletion from inside /test_user
         client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
         println!("Recursive deletion complete for {}", root_dir);
 
-        // Cleanup local temp files
+        // Clean up local temp files
         let _ = std::fs::remove_file(&file1_path);
         let _ = std::fs::remove_file(&file2_path);
 
