@@ -331,8 +331,6 @@ mod tests {
 
         ready_rx.recv().expect("Server failed to start");
 
-        // wait_for_server_ready(&addr);
-
         (handle, addr, shutdown_tx)
     }
 
@@ -360,6 +358,7 @@ mod tests {
     #[test]
     fn test_connection() {
         let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+        wait_for_server_ready(&addr);
 
         let addr_parts: Vec<&str> = addr.split(':').collect();
         let host = addr_parts[0];
@@ -404,6 +403,7 @@ mod tests {
     #[test]
     fn test_file_upload_and_download() {
         let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+        wait_for_server_ready(&addr);
 
         let addr_parts: Vec<&str> = addr.split(':').collect();
         let host = addr_parts[0];
@@ -437,33 +437,34 @@ mod tests {
     }
 
     #[test]
-fn test_make_and_change_directory() {
-    let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+    fn test_make_and_change_directory() {
+        let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+        wait_for_server_ready(&addr);
 
-    let addr_parts: Vec<&str> = addr.split(':').collect();
-    let host = addr_parts[0];
-    let port: u16 = addr_parts[1].parse().expect("Invalid port");
+        let addr_parts: Vec<&str> = addr.split(':').collect();
+        let host = addr_parts[0];
+        let port: u16 = addr_parts[1].parse().expect("Invalid port");
 
-    let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
-    client.connect().expect("Failed to connect");
+        let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
+        client.connect().expect("Failed to connect");
 
-    // Ensure user root is correct
-    let user_root = "upload";
-    client.make_directory(user_root).ok();
+        // Ensure user root is correct
+        let user_root = "upload";
+        client.make_directory(user_root).ok();
 
-    let uuid = Uuid::new_v4();
-    let dir = format!("{}/test_dir_{}", user_root, uuid);
-    client.make_directory(&dir).expect("Failed to create dir");
+        let uuid = Uuid::new_v4();
+        let dir = format!("{}/test_dir_{}", user_root, uuid);
+        client.make_directory(&dir).expect("Failed to create dir");
 
-    println!("Directory Made: {dir}");
-    client.change_directory(&dir).expect("Failed to change dir");
+        println!("Directory Made: {dir}");
+        client.change_directory(&dir).expect("Failed to change dir");
 
-    assert!(client.is_connected());
-    client.disconnect();
+        assert!(client.is_connected());
+        client.disconnect();
 
-    shutdown_tx.send(()).expect("Failed to send shutdown");
-    handle.join().expect("Server thread panicked");
-}
+        shutdown_tx.send(()).expect("Failed to send shutdown");
+        handle.join().expect("Server thread panicked");
+    }
 
 
     #[test]
