@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    environment: Test Action  # ✅ Required for secrets defined in this environment
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
