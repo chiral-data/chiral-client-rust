@@ -1,0 +1,74 @@
+name: Rust Cross-Platform Tests
+
+on:
+  push:
+    branches: [main, 7-move-the-unit-tests]
+  pull_request:
+    branches: [main, 7-move-the-unit-tests]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    environment: Test Action  
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    env:
+      CHIRAL_STAGING_API_URL: ${{ secrets.CHIRAL_STAGING_API_URL }}
+      TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+      TEST_TOKEN_AUTH: ${{ secrets.TEST_TOKEN_AUTH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install protoc (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+
+      - name: Install protoc (Windows)
+        if: runner.os == 'Windows'
+        run: choco install protoc --version=21.12 -y
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create .env.staging file from secrets (safe)
+        run: |
+            echo "CHIRAL_STAGING_API_URL=\"${CHIRAL_STAGING_API_URL}\"" >> .env.staging
+            echo "TEST_EMAIL=\"${TEST_EMAIL}\"" >> .env.staging
+            echo "TEST_TOKEN_AUTH=\"${TEST_TOKEN_AUTH}\"" >> .env.staging
+
+
+      - name: Run tests repeatedly (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          for i in {1..5}; do
+            echo "Run #$i ----------------------------"
+            cargo test --all || exit 1
+          done
+
+      - name: Run tests repeatedly (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          For ($i = 1; $i -le 5; $i++) {
+            Write-Host "Run #$i ----------------------------"
+            cargo test -- --nocapture
+          }
