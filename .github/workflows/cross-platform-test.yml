@@ -48,11 +48,12 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create .env.staging file from secrets
+      - name: Create .env.staging file from secrets (safe)
         run: |
-          echo "CHIRAL_STAGING_API_URL=${CHIRAL_STAGING_API_URL}" >> .env.staging
-          echo "TEST_EMAIL=${TEST_EMAIL}" >> .env.staging
-          echo "TEST_TOKEN_AUTH=${TEST_TOKEN_AUTH}" >> .env.staging
+            echo "CHIRAL_STAGING_API_URL=\"${CHIRAL_STAGING_API_URL}\"" >> .env.staging
+            echo "TEST_EMAIL=\"${TEST_EMAIL}\"" >> .env.staging
+            echo "TEST_TOKEN_AUTH=\"${TEST_TOKEN_AUTH}\"" >> .env.staging
+
 
       - name: Run tests repeatedly (Unix)
         if: runner.os != 'Windows'
