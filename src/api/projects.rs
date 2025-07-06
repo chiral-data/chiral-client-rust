@@ -175,10 +175,9 @@ mod tests{
     #[tokio::test]
     async fn test_list_of_projects() {
         dotenvy::from_filename(".env.staging").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
-
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
         let projects = list_of_projects(&mut client, &email, &token_auth).await.expect("List of projects failed");
@@ -206,9 +205,9 @@ mod tests{
     #[tokio::test]
     async fn test_list_of_example_projects(){
         dotenvy::from_filename(".env.staging").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
 
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
@@ -236,9 +235,9 @@ mod tests{
     #[tokio::test]
     async fn test_list_of_project_files(){
         dotenvy::from_filename(".env.staging").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
 
         let mut client = create_client(&url).await.expect("Failed to create API client.");
         let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("Failed to get example projects");
@@ -269,9 +268,9 @@ mod tests{
     #[tokio::test]
     async fn test_import_example_project() {
         dotenvy::from_filename(".env.staging").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL is not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL is not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH is not set");
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
 
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
@@ -322,9 +321,9 @@ mod tests{
     #[tokio::test]
     async fn test_get_project_files() {
         dotenvy::from_filename(".env.staging").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing CHIRAL_STAGING_API_URL");
-        let email = std::env::var("TEST_EMAIL").expect("Missing TEST_EMAIL");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing TEST_TOKEN_AUTH");
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
 
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
