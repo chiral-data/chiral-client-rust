@@ -158,7 +158,7 @@ mod tests{
 
      #[tokio::test]
     async fn test_submit_job(){
-        dotenvy::from_filename(".env").ok();
+        dotenvy::from_filename(".env.staging").ok();
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
         let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
@@ -177,7 +177,7 @@ mod tests{
 
     #[tokio::test]
     async fn test_submit_test_job() {
-        dotenvy::from_filename(".env").ok();
+        dotenvy::from_filename(".env.staging").ok();
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
         let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
@@ -202,7 +202,7 @@ mod tests{
 
     #[tokio::test]
     async fn test_get_job() {
-        dotenvy::from_filename(".env").ok();
+        dotenvy::from_filename(".env.staging").ok();
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
         let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
@@ -225,10 +225,11 @@ mod tests{
         println!("GetJob result: {}", get_job_result);
     }
 
+
     
     #[tokio::test]
     async fn test_get_jobs() {
-        dotenvy::from_filename(".env").ok();
+        dotenvy::from_filename(".env.staging").ok();
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
         let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
