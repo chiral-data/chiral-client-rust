@@ -70,5 +70,5 @@ jobs:
         run: |
           For ($i = 1; $i -le 5; $i++) {
             Write-Host "Run #$i ----------------------------"
-            cargo test --all
+            cargo test -- --nocapture
           }
