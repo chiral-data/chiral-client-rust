@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    environment: Test Action  # ✅ Required for secrets defined in this environment
+    environment: Test Action  
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -69,6 +69,6 @@ jobs:
         shell: pwsh
         run: |
           For ($i = 1; $i -le 5; $i++) {
-            Write-Host "🧪 Run #$i ----------------------------"
+            Write-Host "Run #$i ----------------------------"
             cargo test --all
           }
