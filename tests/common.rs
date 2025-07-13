@@ -1,7 +1,7 @@
 use std::env;
 
 pub fn load_env() {
-    dotenvy::from_filename(".env").expect("Failed to load .env");
+    dotenvy::from_filename(".env.staging").expect("Failed to load .env");
 }
 
 pub fn get_url() -> String {
