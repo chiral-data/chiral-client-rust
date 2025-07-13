@@ -6,12 +6,7 @@ use crate::api::client::chiral::RequestUserCommunicate;
 
 pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjects";
-    let serialized = format!(
-        "{{\"{}\": null}}",
-        end_point
-    );
-
-
+    let serialized = format!("{{\"{end_point}\": null}}");
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -39,11 +34,7 @@ pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, t
 
 pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfExampleProjects";
-    let serialized = format!(
-        "{{\"{}\": null}}",
-        end_point
-    );
-
+    let serialized = format!("{{\"{end_point}\": null}}");
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -71,12 +62,7 @@ pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email:
 
 pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjectFiles";
-    let serialized = format!(
-    "{{\"{}\": \"{}\"}}",
-    end_point, project_name
-    );
-
-
+    let serialized = format!("{{\"{end_point}\": \"{project_name}\"}}");
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -104,12 +90,7 @@ pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &s
 
 pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ImportExampleProject";
-    let serialized = format!(
-    "{{\"{}\": \"{}\"}}",
-    end_point, project_name
-    );
-
-
+    let serialized = format!("{{\"{end_point}\": \"{project_name}\"}}");
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -137,18 +118,12 @@ pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &
 
 pub async fn get_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str, file_name: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let _end_point = "GetJobs";
     let end_point = "GetProjectFile";
-    let serialized = format!(
-        "{{\"{}\": [\"{}\", \"{}\"]}}",
-        end_point, project_name, file_name
-    );
-
-
+    let serialized = format!("{{\"{end_point}\": [\"{project_name}\", \"{file_name}\"]}}");
     let req_msg = RequestUserCommunicate {
         serialized_request: serialized.clone(),
     };
 
-    println!("Sending payload: {}", serialized); 
-
+    println!("Sending payload: {serialized}" ); 
     let mut request = Request::new(req_msg);
     request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
     request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
@@ -179,14 +154,15 @@ mod tests{
     use super::*;
     use crate::api::create_client;
     use dotenvy;
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
 
     #[tokio::test]
     async fn test_list_of_projects() {
-        dotenvy::from_filename(".env").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
-
+        dotenvy::from_filename(".env.staging").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
         let projects = list_of_projects(&mut client, &email, &token_auth).await.expect("List of projects failed");
@@ -213,11 +189,10 @@ mod tests{
 
     #[tokio::test]
     async fn test_list_of_example_projects(){
-        dotenvy::from_filename(".env").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
-
+        dotenvy::from_filename(".env.staging").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
         let projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("List of projects failed");
@@ -243,11 +218,10 @@ mod tests{
 
     #[tokio::test]
     async fn test_list_of_project_files(){
-        dotenvy::from_filename(".env").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
-
+        dotenvy::from_filename(".env.staging").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
         let mut client = create_client(&url).await.expect("Failed to create API client.");
         let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("Failed to get example projects");
         let project_name_opt = example_projects.as_array().and_then(|arr| {
@@ -276,15 +250,13 @@ mod tests{
 
     #[tokio::test]
     async fn test_import_example_project() {
-        dotenvy::from_filename(".env").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL is not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL is not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH is not set");
-
+        dotenvy::from_filename(".env.staging").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
         let existing_projects = list_of_projects(&mut client, &email, &token_auth).await.expect("Failed to fetch list of projects");
-
         println!("Existing projects: {}", existing_projects);
 
         let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("Failed to fetch list of example projects");
@@ -328,43 +300,55 @@ mod tests{
     }
     
     #[tokio::test]
-    #[ignore]
     async fn test_get_project_files() {
-        dotenvy::from_filename(".env").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL is not set");
-        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL is not set");
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH is not set");
-
+        dotenvy::from_filename(".env.staging").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
+        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
         let projects = list_of_projects(&mut client, &email, &token_auth)
             .await
-            .expect("Failed to get list of projects");
+            .expect("Failed to fetch list of projects");
 
         let project_name = projects
             .as_array()
             .and_then(|arr| {
-                arr.iter().find_map(|p| match p {
-                    serde_json::Value::String(name) => Some(name.clone()),
-                    serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
-                    _ => None,
-                })
-            }).expect("No valid project name found in project list");
+                let mut rng = thread_rng();
+                let valid_names: Vec<String> = arr
+                    .iter()
+                    .filter_map(|p| match p {
+                        serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
+                        serde_json::Value::String(name) => Some(name.clone()),
+                        _ => None,
+                    })
+                    .filter(|name| !name.starts_with("gromacs_bench"))
+                    .collect();
 
-        println!("Using project: {}", project_name);
+                valid_names.choose(&mut rng).cloned()
+            })
+            .expect("No valid project name found (after filtering broken gromacs_bench projects)");
 
+        println!("Using project: {project_name}");
         let files = list_of_project_files(&mut client, &email, &token_auth, &project_name)
             .await
             .expect("Failed to list project files");
 
         let file_array = files.as_array().expect("File list is not an array");
 
-        let mut success = false;
+        println!("Found {} file(s) in project.", file_array.len());
+        let mut at_least_one_success = false;
+
         for file in file_array {
             let file_name = match file {
-                serde_json::Value::String(name) => name.clone(),
-                serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from).unwrap_or_default(),
-                _ => continue,
+                serde_json::Value::Object(obj) => obj.get("name").and_then(|v| v.as_str()).map(String::from),
+                serde_json::Value::String(name) => Some(name.clone()),
+                _ => None,
+            };
+
+            let Some(file_name) = file_name else {
+                println!("Skipping invalid file entry: {file:?}");
+                continue;
             };
 
             println!("Trying file: {}", file_name);
@@ -374,18 +358,22 @@ mod tests{
                     println!("Successfully fetched file: {}\nData: {}", file_name, file_data);
                     assert!(
                         file_data.is_string() || file_data.is_object(),
-                        "Expected JSON string or object, got: {}",
+                        "Expected JSON string or object for file '{}', got: {}",
+                        file_name,
                         file_data
                     );
-                    success = true;
-                    break;
-                },
+                    at_least_one_success = true;
+                }
                 Err(e) => {
-                    println!("Skipping file due to error: {}", e);
+                    println!("Error fetching '{}': {}", file_name, e);
                 }
             }
         }
 
-        assert!(success, "No project file could be successfully fetched and validated.");
+        assert!(
+            at_least_one_success,
+            "No project file could be successfully fetched and validated."
+        );
+
     }
 }

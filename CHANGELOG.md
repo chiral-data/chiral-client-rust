@@ -1,7 +1,22 @@
 # Changelog
 All notable changes will be documented in this file.
 
-## [unreleased] v0.2.4
+## TODO
+- [ ] can tests/common.rs be removed?
+
+## v0.2.1
+### Added
+### Changed
+- resolve conflicts with the branch main
+### Removed
+
+## v0.2.0
+### Added
+- [x] ftp upload & download
+### Changed
+### Removed
+
+## v0.1.0
 ### Added
 - [x] add the following APIs
     - create_client
