@@ -1,10 +1,13 @@
 # Changelog
 All notable changes will be documented in this file.
 
+## TODO
+- [ ] can tests/common.rs be removed?
 
-## [unreleased] v0.1.1
+
+## [unreleased] v0.2.0
 ### Added
-- [ ] ftp upload & download
+- [x] ftp upload & download
 ### Changed
 ### Removed
 
