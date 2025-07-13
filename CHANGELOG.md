@@ -1,7 +1,14 @@
 # Changelog
 All notable changes will be documented in this file.
 
-## [unreleased] v0.2.4
+
+## [unreleased] v0.1.1
+### Added
+- [ ] ftp upload & download
+### Changed
+### Removed
+
+## v0.1.0
 ### Added
 - [x] add the following APIs
     - create_client
