@@ -4,6 +4,11 @@ All notable changes will be documented in this file.
 ## TODO
 - [ ] can tests/common.rs be removed?
 
+## v0.2.1
+### Added
+### Changed
+- resolve conflicts with the branch main
+### Removed
 
 ## v0.2.0
 ### Added
