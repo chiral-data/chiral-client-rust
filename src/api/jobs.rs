@@ -142,7 +142,7 @@ pub async fn submit_job(client: &mut ChiralClient<Channel>, email: &str, token_a
 
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
     use crate::api::create_client;
     use dotenvy;
@@ -216,13 +216,6 @@ mod tests{
         println!("GetJob result: {}", get_job_result);
     }
 
-    
-    #[tokio::test]
-    async fn test_get_jobs() {
-        dotenvy::from_filename(".env.staging").ok();
-        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
-        let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
-        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
     
     #[tokio::test]
     async fn test_get_jobs() {
