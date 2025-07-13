@@ -2,7 +2,6 @@ use tonic::transport::Channel;
 pub use crate::proto::chiral; 
 pub use chiral::chiral_client::ChiralClient;
 
-
 pub async fn create_client(url: &str) -> Result<ChiralClient<Channel>, Box<dyn std::error::Error>> {
     Ok(ChiralClient::connect(url.to_string()).await?)
 }

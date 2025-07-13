@@ -4,12 +4,9 @@ use std::str::FromStr;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
-
 pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjects";
     let serialized = format!("{{\"{end_point}\": null}}");
-
-
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -34,12 +31,10 @@ pub async fn list_of_projects(client: &mut ChiralClient<Channel>, email: &str, t
 
     Err("Unexpected empty response from server".into())
 }
-
 
 pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfExampleProjects";
     let serialized = format!("{{\"{end_point}\": null}}");
-
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -64,13 +59,10 @@ pub async fn list_of_example_projects(client: &mut ChiralClient<Channel>, email:
 
     Err("Unexpected empty response from server".into())
 }
-
 
 pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ListOfProjectFiles";
     let serialized = format!("{{\"{end_point}\": \"{project_name}\"}}");
-
-
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -95,13 +87,10 @@ pub async fn list_of_project_files(client: &mut ChiralClient<Channel>, email: &s
 
     Err("Unexpected empty response from server".into())
 }
-
 
 pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "ImportExampleProject";
     let serialized = format!("{{\"{end_point}\": \"{project_name}\"}}");
-
-
     let req_msg = RequestUserCommunicate{
         serialized_request : serialized.clone(),
     }; 
@@ -127,18 +116,14 @@ pub async fn import_example_project(client: &mut ChiralClient<Channel>, email: &
     Err("Unexpected empty response from server".into())
 }
 
-
 pub async fn get_project_files(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, project_name: &str, file_name: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let _end_point = "GetJobs";
     let end_point = "GetProjectFile";
     let serialized = format!("{{\"{end_point}\": [\"{project_name}\", \"{file_name}\"]}}");
-
-
     let req_msg = RequestUserCommunicate {
         serialized_request: serialized.clone(),
     };
 
     println!("Sending payload: {serialized}" ); 
-
     let mut request = Request::new(req_msg);
     request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
     request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
@@ -208,7 +193,6 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
         let projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("List of projects failed");
@@ -238,7 +222,6 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
         let mut client = create_client(&url).await.expect("Failed to create API client.");
         let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("Failed to get example projects");
         let project_name_opt = example_projects.as_array().and_then(|arr| {
@@ -271,11 +254,9 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
         let existing_projects = list_of_projects(&mut client, &email, &token_auth).await.expect("Failed to fetch list of projects");
-
         println!("Existing projects: {}", existing_projects);
 
         let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("Failed to fetch list of example projects");
@@ -324,7 +305,6 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
         let projects = list_of_projects(&mut client, &email, &token_auth)
@@ -349,9 +329,7 @@ mod tests{
             })
             .expect("No valid project name found (after filtering broken gromacs_bench projects)");
 
-
         println!("Using project: {project_name}");
-
         let files = list_of_project_files(&mut client, &email, &token_auth, &project_name)
             .await
             .expect("Failed to list project files");
@@ -398,5 +376,4 @@ mod tests{
         );
 
     }
-
 }

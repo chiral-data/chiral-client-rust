@@ -5,7 +5,6 @@ use serde_json::json;
 use crate::api::client::chiral::chiral_client::ChiralClient;
 use crate::api::client::chiral::RequestUserCommunicate;
 
-
 pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, job_type_name: &str, index: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitTestJob";
     
@@ -42,7 +41,6 @@ pub async fn submit_test_job(client: &mut ChiralClient<Channel>, email: &str, to
     Err("Unexpected empty response from server".into())
 }
 
-
 pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, offset: u32, count_per_page: u32) -> Result<serde_json::Value, Box<dyn std::error::Error>> {    let end_point = "GetJobs";
     let _end_point = "GetJobs";
     let serialized = format!("{{\"{end_point}\": [{offset}, {count_per_page}]}}");
@@ -52,7 +50,6 @@ pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_aut
     };
 
     println!("Sending payload: {serialized}"); 
-
     let mut request = Request::new(req_msg);
     request.metadata_mut().insert("user_id", MetadataValue::from_str(email)?);
     request.metadata_mut().insert("auth_token", MetadataValue::from_str(token_auth)?);
@@ -78,11 +75,9 @@ pub async fn get_jobs(client: &mut ChiralClient<Channel>, email: &str, token_aut
 
 }
 
-
 pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str,job_id: &str)->  Result<serde_json::Value, Box<dyn std::error::Error>>{
     let end_point = "GetJob";
     let serialized = format!("{{\"{end_point}\": \"{job_id}\"}}");
-
     let req_msg = RequestUserCommunicate{
         serialized_request: serialized.clone(),
     };
@@ -109,7 +104,6 @@ pub async fn get_job(client: &mut ChiralClient<Channel>, email: &str, token_auth
     Err("Unexpected empty response from server".into())
 }
 
-
 pub async fn submit_job(client: &mut ChiralClient<Channel>, email: &str, token_auth: &str, command_string: &str, project_name: &str, input_files: &[&str], output_files: &[&str]) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let end_point = "SubmitJob";
 
@@ -117,7 +111,6 @@ pub async fn submit_job(client: &mut ChiralClient<Channel>, email: &str, token_a
     let output_files_json = serde_json::to_string(&output_files)?;
 
     let serialized = format!("{{\"{end_point}\": [\"{command_string}\", \"{project_name}\", {input_files_json}, {output_files_json}]}}");
-
     let req_msg = RequestUserCommunicate {
         serialized_request: serialized.clone(),
     };
@@ -181,7 +174,6 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
         let job_types = ["sleep_5_secs", "gromacs_bench_mem"];
@@ -206,7 +198,6 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
         let mut client = create_client(&url).await.expect("Failed to create API client.");
         let project_name: &str = "qCEnc6q";
         let input_files = vec!["run.sh", "1aki.pdb"];
@@ -225,7 +216,6 @@ mod tests{
         println!("GetJob result: {}", get_job_result);
     }
 
-
     
     #[tokio::test]
     async fn test_get_jobs() {
@@ -233,7 +223,13 @@ mod tests{
         let url = std::env::var("CHIRAL_STAGING_API_URL").expect("Missing env").trim() .to_string();
         let email = std::env::var("TEST_EMAIL").expect("Missing env").trim() .to_string();
         let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("Missing env").trim() .to_string();
-
+    
+    #[tokio::test]
+    async fn test_get_jobs() {
+        dotenvy::from_filename(".env").ok();
+        let url = std::env::var("CHIRAL_STAGING_API_URL").expect("CHIRAL_STAGING_API_URL environment variable not set");
+        let email = std::env::var("TEST_EMAIL").expect("TEST_EMAIL environment variable not set");
+        let token_auth = std::env::var("TEST_TOKEN_AUTH").expect("TEST_TOKEN_AUTH environment variable not set");
         let mut client = create_client(&url).await.expect("Failed to create API client.");
 
         let json_value = get_jobs(&mut client, &email, &token_auth, 0, 10)
@@ -250,5 +246,4 @@ mod tests{
             assert!(job.get("project_name").is_some(), "Job missing 'project_name'");
         }
     }
-
 }

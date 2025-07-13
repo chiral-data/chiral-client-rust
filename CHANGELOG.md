@@ -5,7 +5,7 @@ All notable changes will be documented in this file.
 - [ ] can tests/common.rs be removed?
 
 
-## [unreleased] v0.2.0
+## v0.2.0
 ### Added
 - [x] ftp upload & download
 ### Changed
