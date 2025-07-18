@@ -17,7 +17,7 @@ mod tests{
         .trim() 
         .to_string();
 
-        println!("CHIRAL_STAGING_API_URL = {:?}", url);
+        println!("CHIRAL_STAGING_API_URL = {url:?}");
         let result = create_client(&url).await;
         assert!(result.is_ok(), "Client creation failed: {:?}", result.err());
     }

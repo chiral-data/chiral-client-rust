@@ -167,21 +167,21 @@ mod tests{
 
         let projects = list_of_projects(&mut client, &email, &token_auth).await.expect("List of projects failed");
 
-        assert!(projects.is_array(),"Expected JSON array but got: {}",projects);
+        assert!(projects.is_array(),"Expected JSON array but got: {projects}");
 
         let projects_array = projects.as_array().expect("Projects response is not a valid JSON array");
 
         for (i, project) in projects_array.iter().enumerate() {
             match project {
                 serde_json::Value::Object(obj) => {
-                    assert!(obj.get("id").is_some(),"Project at index {} missing 'id': {}",i,project);
-                    assert!(obj.get("name").is_some(),"Project at index {} missing 'name': {}",i,project);
+                    assert!(obj.get("id").is_some(),"Project at index {i} missing 'id': {project}");
+                    assert!(obj.get("name").is_some(),"Project at index {i} missing 'name': {project}");
                 }
                 serde_json::Value::String(s) => {
-                    assert!(!s.trim().is_empty(),"Project at index {} is an empty string",i);
+                    assert!(!s.trim().is_empty(),"Project at index {i} is an empty string");
                 }
                 _ => {
-                    panic!("Project at index {} is neither object nor string: {}",i, project);
+                    panic!("Project at index {i} is neither object nor string: {project}");
                 }
             }
         }
@@ -197,19 +197,19 @@ mod tests{
 
         let projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("List of projects failed");
 
-        assert!(projects.is_array(),"Expected JSON array but got: {}",projects);
+        assert!(projects.is_array(),"Expected JSON array but got: {projects}");
         let projects_array = projects.as_array().expect("Projects response is not a valid JSON array");
         for (i, project) in projects_array.iter().enumerate() {
             match project {
                 serde_json::Value::Object(obj) => {
-                    assert!(obj.get("id").is_some(),"Project at index {} missing 'id': {}",i,project);
-                    assert!(obj.get("name").is_some(),"Project at index {} missing 'name': {}",i,project);
+                    assert!(obj.get("id").is_some(),"Project at index {i} missing 'id': {project}");
+                    assert!(obj.get("name").is_some(),"Project at index {i} missing 'name': {project}");
                 }
                 serde_json::Value::String(s) => {
-                    assert!(!s.trim().is_empty(),"Project at index {} is an empty string",i);
+                    assert!(!s.trim().is_empty(),"Project at index {i} is an empty string");
                 }
                 _ => {
-                    panic!("Project at index {} is neither object nor string: {}",i, project);
+                    panic!("Project at index {i} is neither object nor string: {project}");
                 }
             }
         }
@@ -233,18 +233,15 @@ mod tests{
         });
 
         let project_name = project_name_opt.expect("No valid project name found in example projects");
-
-        println!("Using example project: {}", project_name);
-
         let files = list_of_project_files(&mut client, &email, &token_auth, &project_name).await.expect("Failed to get project files");
 
-        assert!(files.is_array(),"Expected project files to be a JSON array, got: {}",files);
+        assert!(files.is_array(),"Expected project files to be a JSON array, got: {files}");
 
         let file_array = files.as_array().unwrap();
         println!("Found {} file(s) in project '{}'", file_array.len(), project_name);
         
         for (i, file) in file_array.iter().enumerate() {
-            assert!(file.is_string(),"Expected file entry at index {} to be a string, got: {}",i,file);
+            assert!(file.is_string(),"Expected file entry at index {i} to be a string, got: {file}");
         }
     }
 
@@ -257,8 +254,6 @@ mod tests{
         let mut client = create_client(&url).await.expect("Failed to create API client");
 
         let existing_projects = list_of_projects(&mut client, &email, &token_auth).await.expect("Failed to fetch list of projects");
-        println!("Existing projects: {}", existing_projects);
-
         let example_projects = list_of_example_projects(&mut client, &email, &token_auth).await.expect("Failed to fetch list of example projects");
 
         let example_project_name = example_projects
@@ -270,8 +265,6 @@ mod tests{
                     _ => None,
                 })
             }).expect("No valid example project name found");
-
-        println!("Trying to import: {}", example_project_name);
 
         let already_exists = existing_projects
             .as_array()
@@ -288,14 +281,9 @@ mod tests{
             })
             .unwrap_or(false);
 
-        if already_exists {
-            println!("Project '{}' already exists — skipping import.", example_project_name);
-        } else {
+        if !already_exists {
             let result = import_example_project(&mut client, &email, &token_auth, &example_project_name).await.expect("Failed to import example project");
-
-            println!("Import result: {}", result);
-
-            assert!(result.is_object() || result.is_string(),"Expected object or string in response, got: {}",result);
+            assert!(result.is_object() || result.is_string(),"Expected object or string in response, got: {result}");
         }
     }
     
@@ -351,21 +339,16 @@ mod tests{
                 continue;
             };
 
-            println!("Trying file: {}", file_name);
-
             match get_project_files(&mut client, &email, &token_auth, &project_name, &file_name).await {
                 Ok(file_data) => {
-                    println!("Successfully fetched file: {}\nData: {}", file_name, file_data);
                     assert!(
                         file_data.is_string() || file_data.is_object(),
-                        "Expected JSON string or object for file '{}', got: {}",
-                        file_name,
-                        file_data
+                        "Expected JSON string or object for file '{file_name}', got: {file_data}",
                     );
                     at_least_one_success = true;
                 }
                 Err(e) => {
-                    println!("Error fetching '{}': {}", file_name, e);
+                    println!("Error fetching '{file_name}': {e}");
                 }
             }
         }
