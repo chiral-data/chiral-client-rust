@@ -163,7 +163,7 @@ mod tests {
         let job_id = submit_job(&mut client, &email, &token_auth, "sh run.sh", project_name, &input_files, &output_files).await.expect("submit_job failed");
 
         // Assert that the returned value is a non-empty string
-        assert!(job_id.is_string(), "Expected job_id to be a string, got: {}", job_id);
+        assert!(job_id.is_string(), "Expected job_id to be a string, got: {job_id}");
         let job_id_str = job_id.as_str().unwrap();
         assert!(!job_id_str.trim().is_empty(), "Job ID should not be empty");
     }
@@ -184,9 +184,9 @@ mod tests {
             .await
             .expect("Submit Test Job Failure");
 
-        println!("SubmitTestJob response:\n{}", response_json);
+        println!("SubmitTestJob response:\n{response_json}");
 
-        assert!(response_json.is_string(), "Expected job ID as string but got: {}", response_json);
+        assert!(response_json.is_string(), "Expected job ID as string but got: {response_json}");
         let job_id = response_json.as_str().unwrap();
         assert!(!job_id.trim().is_empty(), "Job ID should not be empty");
     }
@@ -209,11 +209,9 @@ mod tests {
 
         let job_id_str = job_id_value.as_str().expect("Expected job ID to be a string");
 
-        let get_job_result = get_job(&mut client, &email, &token_auth, job_id_str)
+        let _get_job_result = get_job(&mut client, &email, &token_auth, job_id_str)
             .await
             .expect("Job result Failed");
-
-        println!("GetJob result: {}", get_job_result);
     }
 
     
