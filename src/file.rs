@@ -2,13 +2,6 @@ use ftp::FtpStream;
 use std::io::Write;
 use std::fs::File;
 
-// #[derive(Debug, PartialEq)]
-// enum PathType {
-//     NotExist,
-//     File,
-//     Directory,
-// }
-
 pub struct FtpClient {
     ftp_addr: String,
     ftp_port: u16,
@@ -62,7 +55,7 @@ impl FtpClient {
                     }
                     Err(mkdir_error) => {
                         println!("Warning: Could not create directory '{}': {:?}", self.user_id, mkdir_error);
-                        println!("Original cwd error: {:?}", cwd_error);
+                        println!("Original cwd error: {cwd_error:?}");
                         println!("Continuing without user directory - working from root.");
                     }
                 }
@@ -318,7 +311,7 @@ mod tests {
                     select! {
                         result = server_task => {
                             if let Err(e) = result.unwrap() {
-                                eprintln!("FTP Server error: {}", e);
+                                eprintln!("FTP Server error: {e}");
                             }
                         }
                         _ = async_shutdown_rx.recv() => {
@@ -346,7 +339,6 @@ mod tests {
             let mut test_client = FtpClient::new(host, port, "anonymous", "", "test_user");
             if test_client.connect().is_ok() {
                 test_client.disconnect();
-                println!("Server is ready to accept connections at {}", addr);
                 return;
             }
             thread::sleep(Duration::from_millis(50));
@@ -376,12 +368,7 @@ mod tests {
 
             match client.connect() {
                 Ok(_) => {
-                    println!(
-                        "Connected to FTP server at {} with credentials {}/{} and initial directory {}",
-                        addr, user, pass, initial_dir
-                    );
                     assert!(client.is_connected());
-
                     client.disconnect();
                     assert!(!client.is_connected());
 
@@ -389,7 +376,7 @@ mod tests {
                     break;
                 }
                 Err(e) => {
-                    println!("Failed to connect with {}/{}: {}", user, pass, e);
+                    println!("Failed to connect with {user}/{pass}: {e}");
                 }
             }
         }
@@ -453,7 +440,7 @@ mod tests {
         client.make_directory(user_root).ok();
 
         let uuid = Uuid::new_v4();
-        let dir = format!("{}/test_dir_{}", user_root, uuid);
+        let dir = format!("{user_root}/test_dir_{uuid}");
         client.make_directory(&dir).expect("Failed to create dir");
 
         println!("Directory Made: {dir}");
@@ -481,8 +468,8 @@ mod tests {
 
         // Generate unique root and nested directories
         let uuid = Uuid::new_v4();
-        let root_dir = format!("upload1/test_del_{}", uuid);
-        let sub_dir = format!("{}/nested", root_dir);
+        let root_dir = format!("upload1/test_del_{uuid}");
+        let sub_dir = format!("{root_dir}/nested");
 
         // Create directories
         client.make_directory("upload1").ok();
@@ -491,15 +478,15 @@ mod tests {
 
         // Create local temp files
         let temp_dir = std::env::temp_dir();
-        let file1_path = temp_dir.join(format!("ftp_temp_root_{}.txt", uuid));
-        let file2_path = temp_dir.join(format!("ftp_temp_nested_{}.txt", uuid));
+        let file1_path = temp_dir.join(format!("ftp_temp_root_{uuid}.txt"));
+        let file2_path = temp_dir.join(format!("ftp_temp_nested_{uuid}.txt"));
 
         std::fs::write(&file1_path, "Root level file\n").expect("Failed to write temp file1");
         std::fs::write(&file2_path, "Nested file\n").expect("Failed to write temp file2");
 
         // Upload files to FTP server
-        let remote1 = format!("{}/file1.txt", root_dir);
-        let remote2 = format!("{}/file2.txt", sub_dir);
+        let remote1 = format!("{root_dir}/file1.txt");
+        let remote2 = format!("{sub_dir}/file2.txt");
         client.upload_file(file1_path.to_str().unwrap(), &remote1).expect("Upload file1 failed");
         client.upload_file(file2_path.to_str().unwrap(), &remote2).expect("Upload file2 failed");
 
@@ -507,7 +494,6 @@ mod tests {
 
         // ✅ Recursive deletion from inside /test_user
         client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
-        println!("Recursive deletion complete for {}", root_dir);
 
         // Clean up local temp files
         let _ = std::fs::remove_file(&file1_path);
