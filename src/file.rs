@@ -139,6 +139,20 @@ impl FtpClient {
     }
 
 
+    pub fn check_if_directory_exists(&mut self, dir_name: &str) -> Result<bool, ftp::FtpError> {
+        let ftp_stream = match &mut self.ftp {
+            Some(ftp) => ftp,
+            None => {
+                return Err(ftp::FtpError::ConnectionError(std::io::Error::new(
+                    std::io::ErrorKind::NotConnected,
+                    "Not connected to FTP server",
+                )));
+            }
+        };
+
+        Ok(ftp_stream.cwd(dir_name).is_ok())
+    }
+
     pub fn change_directory(&mut self, dir: &str) -> Result<(), ftp::FtpError> {
         let ftp_stream = match &mut self.ftp {
             Some(ftp) => ftp,
