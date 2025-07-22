@@ -120,6 +120,39 @@ impl FtpClient {
 
         Ok(())
     }
+    pub fn current_directory(&mut self) -> Result<String, ftp::FtpError> {
+        let ftp_stream = match &mut self.ftp {
+            Some(ftp) => ftp,
+            None => {
+                return Err(ftp::FtpError::ConnectionError(
+                    std::io::Error::new(std::io::ErrorKind::NotConnected, "Not connected to FTP server"),
+                ))
+            }
+        };
+
+        ftp_stream.pwd()
+    }
+    pub fn check_if_directory_exists(&mut self, dir: &str) -> Result<bool, ftp::FtpError> {
+        let ftp_stream = match &mut self.ftp {
+            Some(ftp) => ftp,
+            None => {
+                return Err(ftp::FtpError::ConnectionError(
+                    std::io::Error::new(std::io::ErrorKind::NotConnected, "Not connected to FTP server"),
+                ))
+            }
+        };
+
+        // Save current working directory
+        let original_dir = ftp_stream.pwd()?;
+
+        // Try changing to the target directory
+        let exists = ftp_stream.cwd(dir).is_ok();
+
+        // Change back to the original directory (ignore failure here)
+        let _ = ftp_stream.cwd(&original_dir);
+
+        Ok(exists)
+    }
 
 
     pub fn make_directory(&mut self, dir_name: &str) -> Result<(), ftp::FtpError> {
@@ -434,24 +467,63 @@ mod tests {
 
         let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
         client.connect().expect("Failed to connect");
-
+        let _ = client.current_directory();
         // Ensure user root is correct
         let user_root = "upload";
         client.make_directory(user_root).ok();
-
+        let _ = client.current_directory();
+        
         let uuid = Uuid::new_v4();
         let dir = format!("{user_root}/test_dir_{uuid}");
         client.make_directory(&dir).expect("Failed to create dir");
 
         println!("Directory Made: {dir}");
         client.change_directory(&dir).expect("Failed to change dir");
-
+        let _ = client.current_directory();
         assert!(client.is_connected());
         client.disconnect();
 
         shutdown_tx.send(()).expect("Failed to send shutdown");
         handle.join().expect("Server thread panicked");
     }
+
+    #[test]
+    fn test_check_if_directory_exists() {
+        let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+        wait_for_server_ready(&addr);
+
+        let addr_parts: Vec<&str> = addr.split(':').collect();
+        let host = addr_parts[0];
+        let port: u16 = addr_parts[1].parse().expect("Invalid port");
+
+        let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
+        client.connect().expect("Failed to connect");
+
+        let uuid1 = Uuid::new_v4();
+        let uuid2 = Uuid::new_v4();
+
+        let dir_name_1 = format!("test_del_{uuid1}");
+        let dir_name_2 = format!("test_del_{uuid2}");
+        let full_path_1 = format!("upload1/{dir_name_1}");
+
+        client.make_directory("upload1").ok();
+        client.make_directory(&full_path_1).expect("Could not create root dir");
+
+        client.change_directory("upload1");
+
+        // ✅ should exist
+        assert_eq!(
+            client.check_if_directory_exists(&dir_name_1).expect("Failed to check"),
+            true
+        );
+
+        // ❌ should not exist
+        assert_eq!(
+            client.check_if_directory_exists(&dir_name_2).expect("Failed to check"),
+            false
+        );
+    }
+
 
 
     #[test]
