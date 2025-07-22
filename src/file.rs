@@ -120,7 +120,18 @@ impl FtpClient {
 
         Ok(())
     }
+    pub fn current_directory(&mut self) -> Result<String, ftp::FtpError> {
+        let ftp_stream = match &mut self.ftp {
+            Some(ftp) => ftp,
+            None => {
+                return Err(ftp::FtpError::ConnectionError(
+                    std::io::Error::new(std::io::ErrorKind::NotConnected, "Not connected to FTP server"),
+                ))
+            }
+        };
 
+        ftp_stream.pwd()
+    }
 
     pub fn make_directory(&mut self, dir_name: &str) -> Result<(), ftp::FtpError> {
         let ftp_stream = match &mut self.ftp {
@@ -434,18 +445,19 @@ mod tests {
 
         let mut client = FtpClient::new(host, port, "anonymous", "", "test_user");
         client.connect().expect("Failed to connect");
-
+        let _ = client.current_directory();
         // Ensure user root is correct
         let user_root = "upload";
         client.make_directory(user_root).ok();
-
+        let _ = client.current_directory();
+        
         let uuid = Uuid::new_v4();
         let dir = format!("{user_root}/test_dir_{uuid}");
         client.make_directory(&dir).expect("Failed to create dir");
 
         println!("Directory Made: {dir}");
         client.change_directory(&dir).expect("Failed to change dir");
-
+        let _ = client.current_directory();
         assert!(client.is_connected());
         client.disconnect();
 
