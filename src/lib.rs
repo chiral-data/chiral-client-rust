@@ -17,3 +17,6 @@ pub use api::{
 };
 
 pub mod file;
+
+mod client;
+pub use client::Client;
