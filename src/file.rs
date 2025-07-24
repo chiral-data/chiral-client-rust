@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn test_check_if_directory_exists() {
-        let (handle, addr, shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
+        let (_handle, addr, _shutdown_tx) = spawn_test_ftp_server_with_shutdown_ready();
         wait_for_server_ready(&addr);
 
         let addr_parts: Vec<&str> = addr.split(':').collect();
@@ -509,15 +509,13 @@ mod tests {
         client.make_directory("upload1").ok();
         client.make_directory(&full_path_1).expect("Could not create root dir");
 
-        client.change_directory("upload1");
+        let _ = client.change_directory("upload1");
 
-        // ✅ should exist
         assert_eq!(
             client.check_if_directory_exists(&dir_name_1).expect("Failed to check"),
             true
         );
 
-        // ❌ should not exist
         assert_eq!(
             client.check_if_directory_exists(&dir_name_2).expect("Failed to check"),
             false
@@ -564,7 +562,7 @@ mod tests {
 
         println!("Files uploaded to test directories");
 
-        // ✅ Recursive deletion from inside /test_user
+        //  Recursive deletion from inside /test_user
         client.remove_directory_recursive(&root_dir).expect("Recursive deletion failed");
 
         // Clean up local temp files

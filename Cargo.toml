@@ -23,6 +23,7 @@ ftp = "3.0.1"
 uuid = { version = "1", features = ["v4"] }
 libunftp = "0.20"
 unftp-sbe-fs = "0.2"
+derivative = "2"
 
 [build-dependencies]
 tonic-build = "0.11"
